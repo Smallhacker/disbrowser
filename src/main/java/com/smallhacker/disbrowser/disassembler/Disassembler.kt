@@ -1,0 +1,167 @@
+package com.smallhacker.disbrowser.disassembler
+
+import com.smallhacker.disbrowser.asm.*
+import java.util.*
+import kotlin.collections.ArrayList
+
+object Disassembler {
+    fun disassemble(initialState: State, metadata: Metadata, global: Boolean): Disassembly {
+        val seen = HashSet<Address>()
+        val queue = ArrayDeque<State>()
+
+        fun tryAdd(state: State) {
+            if (seen.add(state.address)) {
+                queue.add(state)
+            }
+        }
+        tryAdd(initialState)
+
+        val instructions = ArrayList<Instruction>()
+        while (queue.isNotEmpty()) {
+            val state = queue.remove()
+
+            val ins = disassembleInstruction(state)
+            instructions.add(ins)
+
+            var stop = (ins.opcode.continuation == Continuation.NO) or
+                    (ins.opcode.mode.instructionLength(state) == null)
+
+            metadata[ins.address]?.flags?.forEach {
+                if (it is JmpIndirectLongInterleavedTable) {
+                    if (global) {
+                        it.readTable(state.data)
+                                .map { ins.postState.copy(address = it) }
+                                .forEach { tryAdd(it) }
+                    }
+                    stop = true
+                } else if (it is JslTableRoutine) {
+                    if (global) {
+                        it.readTable(ins.postState)
+                                .map { ins.postState.copy(address = it) }
+                                .forEach { tryAdd(it) }
+                    }
+                    stop = true
+                }
+            }
+
+            val linkedState = ins.linkedState
+
+            if (linkedState != null) {
+                metadata[linkedState.address]?.flags?.forEach {
+                    if (it === NonReturningRoutine) {
+                        stop = true
+                        println(ins.address.toFormattedString())
+                    }
+                }
+            }
+
+            if (!stop) {
+                tryAdd(ins.postState)
+            }
+
+
+            if (linkedState != null) {
+                if (ins.opcode.branch || global) {
+                    tryAdd(linkedState)
+                }
+            }
+        }
+
+        val instructionList = instructions
+                .sortedBy { it.address }
+                .toList()
+
+        return Disassembly(instructionList)
+    }
+
+    fun disassembleSegments(initialState: State): List<Segment> {
+        val mapping = HashMap<Address, Segment>()
+        val queue = ArrayDeque<State>()
+
+        val segments = ArrayList<Segment>()
+
+        fun tryAdd(state: State) {
+            if (!mapping.containsKey(state.address)) {
+                queue.add(state)
+            }
+        }
+        tryAdd(initialState)
+
+
+        while (queue.isNotEmpty()) {
+            val state = queue.remove()
+
+            if (mapping.containsKey(state.address)) {
+                continue
+            }
+
+            val segment = disassembleSegment(state, mapping)
+            if (segment.instructions.isEmpty()) {
+                continue
+            }
+
+            segments.add(segment)
+
+            val end = segment.end
+            end.local.forEach { queue.add(it) }
+
+            end.remote.forEach {
+
+            }
+
+
+        }
+
+        return segments
+    }
+
+    fun disassembleSegment(initialState: State, mapping: MutableMap<Address, Segment>): Segment {
+        val instructions = ArrayList<Instruction>()
+        var lastState = initialState
+
+        val queue = ArrayDeque<State>()
+        val seen = HashSet<Address>()
+
+        fun finalize(segment: Segment): Segment {
+            instructions.forEach {
+                mapping[it.address] = segment
+            }
+            return segment
+        }
+
+        fun tryAdd(state: State) {
+            if (seen.add(state.address)) {
+                queue.add(state)
+            }
+        }
+        tryAdd(initialState)
+
+        while (queue.isNotEmpty()) {
+            val state = queue.remove()
+
+            val ins = disassembleInstruction(state)
+            instructions.add(ins)
+            println(ins)
+
+            val segmentEnd = ins.opcode.ender(ins)
+
+            if (segmentEnd != null) {
+
+                return finalize(Segment(initialState.address, segmentEnd, instructions))
+            }
+
+            tryAdd(ins.postState)
+            lastState = ins.postState
+        }
+
+        return finalize(Segment(initialState.address, continuationSegmentEnd(lastState), instructions))
+    }
+
+    private fun disassembleInstruction(state: State): Instruction {
+        val pc = state.address.pc
+        val opcode = Opcode.opcode(state.data[pc])
+        val length = opcode.mode.instructionLength(state) ?: 1
+        val bytes = state.data.range(pc, length)
+        return Instruction(bytes, opcode, state)
+    }
+}

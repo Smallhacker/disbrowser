@@ -1,0 +1,95 @@
+table {
+    border-spacing: 0;
+    font-family: monospace;
+    white-space: pre
+}
+
+td {
+    padding-right: 12px;
+}
+
+.code-opcode {
+    width: 200px
+}
+
+tr:nth-child(2n) {
+    background-color: #eee
+}
+
+tr {
+    transition: background-color 1000ms 1500ms;
+}
+
+tr.line-active {
+    background-color: yellow !important;
+    transition: none;
+}
+
+.arrow {
+    width: 10px;
+    position: relative;
+    padding-right: 0;
+}
+
+.arrow::before {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 2px;
+    width: 2px;
+    background: blue;
+}
+
+.arrow-up-start::after,
+.arrow-up-end::after,
+.arrow-down-start::after,
+.arrow-down-end::after {
+    content: "";
+    background: blue;
+    height: 2px;
+    left: 25%;
+    right: 2px;
+    top: 50%;
+    margin: -1px 0;
+    position: absolute;
+}
+
+.arrow-down-end::before,
+.arrow-up-end::before {
+    bottom: 50%;
+    margin-bottom: -1px;
+
+}
+
+.arrow-down-start::before,
+.arrow-up-start::before {
+    top: 50%;
+    margin-top: -1px;
+}
+
+.arrow-head {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border: 5px solid transparent;
+    border-right-color: blue;
+    margin: -5px;
+}
+
+.arrow-link {
+    width: 6px;
+    height: 6px;
+    background-color: blue;
+    display: inline-block;
+    border-radius: 100px;
+    z-index: 1;
+    position: relative;
+}
+
+.routine-end > td {
+    border-bottom: 1px solid black;
+}
