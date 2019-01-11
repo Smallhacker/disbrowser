@@ -23,12 +23,12 @@ object Service {
 
     fun showDisassemblyFromReset(): HtmlNode? {
         val resetVectorLocation = RESET_VECTOR_LOCATION
-        val initialAddress = Address(romData.value.getWord(resetVectorLocation.pc).toUInt24())
+        val initialAddress = SnesAddress(romData.value.getWord(resetVectorLocation.pc).toUInt24())
         val flags = VagueNumber(0x30u)
         return showDisassembly(initialAddress, flags)
     }
 
-    fun showDisassembly(initialAddress: Address, flags: VagueNumber): HtmlNode? {
+    fun showDisassembly(initialAddress: SnesAddress, flags: VagueNumber): HtmlNode? {
         val rom = romData.value
 
         val initialState = State(data = rom, address = initialAddress, flags = flags)
@@ -66,7 +66,7 @@ object Service {
         }
     }
 
-    fun updateMetadata(address: Address, field: KMutableProperty1<MetadataLine, String?>, value: String) {
+    fun updateMetadata(address: SnesAddress, field: KMutableProperty1<MetadataLine, String?>, value: String) {
         if (value.isEmpty()) {
             if (address in metadata) {
                 doUpdateMetadata(address, field, null)
@@ -76,7 +76,7 @@ object Service {
         }
     }
 
-    private fun doUpdateMetadata(address: Address, field: KMutableProperty1<MetadataLine, String?>, value: String?) {
+    private fun doUpdateMetadata(address: SnesAddress, field: KMutableProperty1<MetadataLine, String?>, value: String?) {
         val line = metadata.getOrCreate(address)
         field.set(line, value)
 

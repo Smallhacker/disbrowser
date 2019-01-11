@@ -3,10 +3,10 @@ package com.smallhacker.disbrowser.asm
 import com.smallhacker.disbrowser.util.*
 
 interface CodeUnit {
-    val address: Address?
-    val relativeAddress: Address
-    val presentedAddress: Address
-    val nextPresentedAddress: Address
+    val address: SnesAddress?
+    val relativeAddress: SnesAddress
+    val presentedAddress: SnesAddress
+    val nextPresentedAddress: SnesAddress
 
     val linkedState: State?
     val preState: State?
@@ -19,6 +19,11 @@ interface CodeUnit {
     fun operandByte(index: UInt): UByte = bytes[opcode.operandIndex + index]
     fun printOpcodeAndSuffix(): String {
         val mnemonic = opcode.mnemonic.displayName
+        val suffix = lengthSuffix ?: ""
+        return "$mnemonic$suffix"
+    }
+    fun printAlternativeOpcodeAndSuffix(): String? {
+        val mnemonic = opcode.mnemonic.alternativeName ?: return null
         val suffix = lengthSuffix ?: ""
         return "$mnemonic$suffix"
     }
@@ -58,22 +63,22 @@ interface CodeUnit {
 class DataBlock(
         override val opcode: Opcode,
         override val bytes: RomData,
-        override val presentedAddress: Address,
-        override val relativeAddress: Address,
+        override val presentedAddress: SnesAddress,
+        override val relativeAddress: SnesAddress,
         override val linkedState: State?
 ) : CodeUnit {
-    override val nextPresentedAddress: Address
+    override val nextPresentedAddress: SnesAddress
         get() = presentedAddress + operandLength.toInt()
     override val operandLength get() = bytes.size
 
-    override val address: Address? = null
+    override val address: SnesAddress? = null
     override val preState: State? = null
     override val postState: State? = null
     override val lengthSuffix: String? = null
 }
 
 class Instruction(override val bytes: RomData, override val opcode: Opcode, override val preState: State) : CodeUnit {
-    override val address: Address get() = preState.address
+    override val address: SnesAddress get() = preState.address
     override val relativeAddress get() = address
     override val presentedAddress get() = address
     override val nextPresentedAddress get() = postState.address
@@ -105,18 +110,18 @@ class Instruction(override val bytes: RomData, override val opcode: Opcode, over
     override val operandLength
         get() = opcode.mode.operandLength(preState)
 
-    private fun link(): Address? {
+    private fun link(): SnesAddress? {
         if (!opcode.link) {
             return null
         }
 
         return when (opcode.mode) {
             Mode.ABSOLUTE -> relativeAddress.withinBank(word)
-            Mode.ABSOLUTE_LONG -> Address(long)
+            Mode.ABSOLUTE_LONG -> SnesAddress(long)
             Mode.RELATIVE -> relativeAddress + 2 + signedByte.toInt()
             Mode.RELATIVE_LONG -> relativeAddress + 3 + signedWord.toInt()
             Mode.DATA_WORD -> relativeAddress.withinBank(word)
-            Mode.DATA_LONG -> Address(long)
+            Mode.DATA_LONG -> SnesAddress(long)
             else -> null
         }
     }

@@ -2,10 +2,14 @@ package com.smallhacker.disbrowser.asm
 
 import com.smallhacker.disbrowser.ImmStack
 import com.smallhacker.disbrowser.immStack
+import com.smallhacker.disbrowser.util.toUInt24
 
-data class State(val origin: Instruction? = null, val data: RomData, val address: Address, val flags: VagueNumber = VagueNumber(), val stack: ImmStack<VagueNumber> = immStack()) {
+data class State(val origin: Instruction? = null, val data: RomData, val address: SnesAddress, val flags: VagueNumber = VagueNumber(), val stack: ImmStack<VagueNumber> = immStack()) {
     val m: Boolean? get() = flags.getBoolean(0x20u)
     val x: Boolean? get() = flags.getBoolean(0x10u)
+    val db: UByte? get() = pb // TODO
+    val dp: UShort? get() = 0x7e00u // TODO
+    val pb: UByte get() = (address.value shr 16).toUByte()
 
     val mWidth: UInt? get() = toWidth(m)
     val xWidth: UInt? get() = toWidth(x)
@@ -16,7 +20,7 @@ data class State(val origin: Instruction? = null, val data: RomData, val address
 
     private fun withFlags(flags: VagueNumber) = copy(flags = flags)
 
-    fun mutateAddress(mutator: (Address) -> Address) = copy(address = mutator(address))
+    fun mutateAddress(mutator: (SnesAddress) -> SnesAddress) = copy(address = mutator(address))
     fun withOrigin(instruction: Instruction?) = copy(origin = instruction)
 
     fun push(value: UInt) = push(VagueNumber(value))
@@ -50,6 +54,16 @@ data class State(val origin: Instruction? = null, val data: RomData, val address
 
     override fun toString(): String {
         return "A:${printSize(m)} XY:${printSize(x)} S:" + stackToString()
+    }
+
+    fun resolve(directPage: UByte) = dp?.let { dp ->
+        val ptr = (dp.toUInt24() shl 8) or (directPage.toUInt24())
+        SnesAddress(ptr)
+    }
+
+    fun resolve(absolute: UShort)= db?.let { db ->
+        val ptr = (db.toUInt24() shl 16) or (absolute.toUInt24())
+        SnesAddress(ptr)
     }
 
     private fun stackToString(): String {

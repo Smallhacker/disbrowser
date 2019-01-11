@@ -9,13 +9,13 @@ class Grid {
 
     private val content = HashMap<Pair<Int, Int>, HtmlNode?>()
     private val cellClasses = HashMap<Pair<Int, Int>, String>()
-    private val addresses = HashMap<Address, Int>()
+    private val addresses = HashMap<SnesAddress, Int>()
     private val rowClasses = HashMap<Int, String>()
     private val rowId = HashMap<Int, String>()
     private var height = 0
-    private var nextAddress: Address? = null
+    private var nextAddress: SnesAddress? = null
 
-    fun arrow(from: Address, to: Address) {
+    fun arrow(from: SnesAddress, to: SnesAddress) {
         val yStart = addresses[from]
         val yEnd = addresses[to]
         if (yStart == null || yEnd == null) {
@@ -60,7 +60,7 @@ class Grid {
     }
 
     fun add(ins: CodeUnit, metadata: Metadata, disassembly: Disassembly) {
-        val insMetadata = ins.address ?.let { metadata[it] }
+        val insMetadata = ins.address?.let { metadata[it] }
 
         val actualAddress = ins.address
         val presentedAddress = ins.presentedAddress
@@ -80,7 +80,7 @@ class Grid {
                 text(ins.bytesToString()),
                 editableField(presentedAddress, "label", insMetadata?.label),
                 fragment {
-                    text(ins.printOpcodeAndSuffix())
+                    opcodeNode(ins)
                     text(" ")
                     var operands = ins.printOperands()
 
@@ -111,7 +111,19 @@ class Grid {
         }
     }
 
-    private fun editableField(address: Address, type: String, value: String?): HtmlNode {
+    private fun HtmlArea.opcodeNode(ins: CodeUnit) {
+        val alt = ins.printAlternativeOpcodeAndSuffix()
+        if (alt == null) {
+            text(ins.printOpcodeAndSuffix())
+        } else {
+            span {
+                text(ins.printOpcodeAndSuffix())
+            }.attr("title", alt).addClass("opcode-info")
+        }
+
+    }
+
+    private fun editableField(address: SnesAddress, type: String, value: String?): HtmlNode {
         return input(value = value ?: "")
                 .addClass("field-$type")
                 .addClass("field-editable")
@@ -124,7 +136,7 @@ class Grid {
         add(y, null, null, null, null, text("..."), null, null)
     }
 
-    private fun add(y: Int, address: Address?,
+    private fun add(y: Int, address: SnesAddress?,
                     cAddress: HtmlNode?,
                     cBytes: HtmlNode?,
                     cLabel: HtmlNode?,

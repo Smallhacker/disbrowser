@@ -99,9 +99,12 @@ tr.line-active {
     border: none;
     background: none;
     padding: 0;
-    width: 100%;
 }
 
 .field-comment {
     width: 500px;
+}
+
+.opcode-info{
+    text-decoration: green underline dotted;
 }

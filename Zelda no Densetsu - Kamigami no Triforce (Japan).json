@@ -1,39 +1,155 @@
 {
-  "008000" : {
-    "label" : "ResetVector"
-  },
-  "008034" : {
-    "label" : "MainGameLoop"
-  },
-  "0080b5" : {
-    "label" : "JumpToGameMode"
-  },
-  "0080c6" : {
-    "flags" : [ {
-      "flagType" : "JmpIndirectLongInterleavedTable",
-      "start" : "008061",
-      "entries" : 28
-    } ]
-  },
-  "00841e" : {
-    "label" : "ClearOam",
-    "comment" : "Test3"
-  },
-  "00879c" : {
-    "flags" : [ {
-      "flagType" : "NonReturningRoutine"
-    } ]
-  },
-  "0287d0" : {
-    "flags" : [ {
-      "flagType" : "JslTableRoutine",
-      "entries" : 4
-    } ]
-  },
-  "0cc115" : {
-    "flags" : [ {
-      "flagType" : "JslTableRoutine",
-      "entries" : 12
-    } ]
+  "code" : {
+    "008000" : {
+      "label" : "ResetVector"
+    },
+    "00801b" : {
+      "comment" : "\\ Turn off emulation mode"
+    },
+    "00801c" : {
+      "comment" : "/"
+    },
+    "00801f" : {
+      "comment" : "\\ Set direct page"
+    },
+    "008022" : {
+      "comment" : "/"
+    },
+    "008023" : {
+      "comment" : "\\ Set stack position"
+    },
+    "008026" : {
+      "comment" : "/"
+    },
+    "008034" : {
+      "label" : "MainGameLoop",
+      "comment" : "Wait for NMI"
+    },
+    "00805d" : {
+      "comment" : "Clear NMI flag"
+    },
+    "0080b5" : {
+      "label" : "JumpToGameMode",
+      "comment" : "Y = Current game mode"
+    },
+    "0080b7" : {
+      "comment" : "\\ Load routine low byte"
+    },
+    "0080ba" : {
+      "comment" : "/"
+    },
+    "0080bc" : {
+      "comment" : "\\ Load routine mid byte"
+    },
+    "0080bf" : {
+      "comment" : "/"
+    },
+    "0080c1" : {
+      "comment" : "\\ Load routine high byte"
+    },
+    "0080c4" : {
+      "comment" : "/"
+    },
+    "0080c6" : {
+      "flags" : [ {
+        "flagType" : "JmpIndirectLongInterleavedTable",
+        "start" : "008061",
+        "entries" : 28
+      } ]
+    },
+    "00841e" : {
+      "label" : "ClearOam",
+      "comment" : "Test3"
+    },
+    "00879c" : {
+      "comment" : "Preserve Y value for later",
+      "flags" : [ {
+        "flagType" : "NonReturningRoutine"
+      } ]
+    },
+    "00879e" : {
+      "comment" : "Y = Ret.Bank"
+    },
+    "00879f" : {
+      "comment" : "$02 = Ret.Bank"
+    },
+    "0087a3" : {
+      "comment" : "\\"
+    },
+    "0087a6" : {
+      "comment" : "|"
+    },
+    "0087a8" : {
+      "comment" : "| Y = In.A * 3"
+    },
+    "0087a9" : {
+      "comment" : "|"
+    },
+    "0087ab" : {
+      "comment" : "/"
+    },
+    "0087ac" : {
+      "comment" : "\\ $03-$04 = Ret.Offset"
+    },
+    "0087ad" : {
+      "comment" : "/"
+    },
+    "0087af" : {
+      "comment" : "Increase Y to compensate for Ret being off by one"
+    },
+    "0087b0" : {
+      "comment" : "\\"
+    },
+    "0087b2" : {
+      "comment" : "|"
+    },
+    "0087b4" : {
+      "comment" : "| Load target pointer into $00-03 (last byte unused)"
+    },
+    "0087b5" : {
+      "comment" : "|"
+    },
+    "0087b7" : {
+      "comment" : "/"
+    },
+    "0087bb" : {
+      "comment" : "Restore initial Y value"
+    },
+    "0087bd" : {
+      "comment" : "Jump to pointer"
+    },
+    "008901" : {
+      "comment" : "\\"
+    },
+    "008903" : {
+      "comment" : "|"
+    },
+    "008905" : {
+      "comment" : "| Write #$19:8000 to $00"
+    },
+    "008907" : {
+      "comment" : "|"
+    },
+    "008909" : {
+      "comment" : "|"
+    },
+    "00890b" : {
+      "comment" : "/"
+    },
+    "0287d0" : {
+      "flags" : [ {
+        "flagType" : "JslTableRoutine",
+        "entries" : 4
+      } ]
+    },
+    "029ee3" : {
+      "label" : "GM_TriforceRoom"
+    },
+    "0cc115" : {
+      "flags" : [ {
+        "flagType" : "JslTableRoutine",
+        "entries" : 12
+      } ]
+    }
   }
 }

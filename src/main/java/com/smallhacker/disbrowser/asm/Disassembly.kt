@@ -3,7 +3,7 @@ package com.smallhacker.disbrowser.asm
 class Disassembly(lines: List<CodeUnit>) : Iterable<CodeUnit> {
     override fun iterator() = lineList.iterator() as Iterator<CodeUnit>
 
-    private val knownAddresses = HashSet<Address>()
+    private val knownAddresses = HashSet<SnesAddress>()
     private val lineList = ArrayList<CodeUnit>()
 
     init {
@@ -16,5 +16,5 @@ class Disassembly(lines: List<CodeUnit>) : Iterable<CodeUnit> {
         }
     }
 
-    operator fun contains(address: Address) = address in knownAddresses
+    operator fun contains(address: SnesAddress) = address in knownAddresses
 }

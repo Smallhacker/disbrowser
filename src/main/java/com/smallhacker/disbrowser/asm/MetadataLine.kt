@@ -8,8 +8,9 @@ data class MetadataLine(
         var label: String? = null,
         var comment: String? = null,
         var preComment: String? = null,
+        var length: Int? = null,
         val flags: MutableList<InstructionFlag> = ArrayList()
 ) {
     @JsonIgnore
-    fun isEmpty() = (label == null) && (comment == null) && (preComment == null) && (flags.isEmpty())
+    fun isEmpty() = (label == null) && (comment == null) && (preComment == null) && (length == 0) && (flags.isEmpty())
 }

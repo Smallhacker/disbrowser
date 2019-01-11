@@ -7,36 +7,34 @@ import com.smallhacker.disbrowser.util.toUInt24
 import java.util.*
 
 class Metadata {
-    private val lines: MutableMap<Address, MetadataLine>
+    @JsonProperty
+    private val code: TreeMap<SnesAddress, MetadataLine>
 
     constructor() {
-        this.lines = HashMap()
+        this.code = TreeMap()
     }
 
     @JsonCreator
-    private constructor(@JsonProperty lines: Map<Address, MetadataLine>) {
-        this.lines = HashMap(lines)
+    private constructor(@JsonProperty code: Map<SnesAddress, MetadataLine>) {
+        this.code = TreeMap(code)
     }
 
-    @JsonValue
-    private fun serialize() = TreeMap(lines)
-
-    operator fun set(address: Address, line: MetadataLine?): Metadata {
+    operator fun set(address: SnesAddress, line: MetadataLine?): Metadata {
         if (line == null) {
-            lines.remove(address)
+            code.remove(address)
         } else {
-            lines[address] = line
+            code[address] = line
         }
         return this
     }
 
-    operator fun get(address: Address): MetadataLine? {
-        return lines[address]
+    operator fun get(address: SnesAddress): MetadataLine? {
+        return code[address]
     }
 
-    operator fun contains(address: Address) = lines[address] != null
+    operator fun contains(address: SnesAddress) = code[address] != null
 
-    fun getOrCreate(address: Address): MetadataLine {
+    fun getOrCreate(address: SnesAddress): MetadataLine {
         val line = this[address]
         if (line != null) {
             return line
@@ -60,17 +58,17 @@ object NonReturningRoutine : InstructionFlag {
 }
 
 class JmpIndirectLongInterleavedTable @JsonCreator constructor(
-        @field:JsonProperty @JsonProperty private val start: Address,
+        @field:JsonProperty @JsonProperty private val start: SnesAddress,
         @field:JsonProperty @JsonProperty private val entries: Int
 ) : InstructionFlag {
     private val uEntries get() = entries.toUInt()
 
-    fun readTable(data: RomData): Sequence<Address> {
+    fun readTable(data: RomData): Sequence<SnesAddress> {
         return (0u until uEntries)
                 .asSequence()
                 .map { it + start.pc }
                 .map { pc -> joinBytes(data[pc], data[pc + uEntries], data[pc + uEntries + uEntries]).toUInt24() }
-                .map { Address(it) }
+                .map { SnesAddress(it) }
     }
 
     fun generateCode(jumpInstruction: Instruction): Sequence<DataBlock> {
@@ -92,7 +90,7 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
                             jumpInstruction.postState.address + offset.toInt(),
                             jumpInstruction.relativeAddress,
                             jumpInstruction.opcode.mutate(jumpInstruction)
-                                    .mutateAddress { Address(target) }
+                                    .mutateAddress { SnesAddress(target) }
                                     .withOrigin(jumpInstruction)
                     )
 //                    Instruction(
@@ -110,13 +108,13 @@ class JslTableRoutine @JsonCreator constructor(
         @field:JsonProperty @JsonProperty private val entries: Int
 ) : InstructionFlag {
 
-    fun readTable(postJsr: State): Sequence<Address> {
+    fun readTable(postJsr: State): Sequence<SnesAddress> {
         val data = postJsr.data
         return (0u until entries.toUInt())
                 .asSequence()
                 .map { postJsr.address.pc + (it * 3u) }
                 .map { pc -> joinBytes(data[pc], data[pc + 1u], data[pc + 2u]).toUInt24() }
-                .map { Address(it) }
+                .map { SnesAddress(it) }
     }
 
     override fun toString() = "JslTableRoutine($entries)"

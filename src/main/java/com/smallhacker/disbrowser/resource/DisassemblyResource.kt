@@ -2,7 +2,7 @@ package com.smallhacker.disbrowser.resource
 
 import com.smallhacker.disbrowser.HtmlNode
 import com.smallhacker.disbrowser.Service
-import com.smallhacker.disbrowser.asm.Address
+import com.smallhacker.disbrowser.asm.SnesAddress
 import com.smallhacker.disbrowser.asm.VagueNumber
 import java.nio.charset.StandardCharsets
 import javax.ws.rs.GET
@@ -30,7 +30,7 @@ class DisassemblyResource {
     @Produces(MediaType.TEXT_HTML)
     fun getIt(@PathParam("address") address: String, @PathParam("state") state: String): Response {
         return handle {
-            Address.parse(address)?.let {
+            SnesAddress.parse(address)?.let {
                 val flags = parseState(state)
                 Service.showDisassembly(it, flags)
             }

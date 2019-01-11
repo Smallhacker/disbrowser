@@ -6,7 +6,7 @@ import kotlin.collections.ArrayList
 
 object Disassembler {
     fun disassemble(initialState: State, metadata: Metadata, global: Boolean): Disassembly {
-        val seen = HashSet<Address>()
+        val seen = HashSet<SnesAddress>()
         val queue = ArrayDeque<State>()
 
         fun tryAdd(state: State) {
@@ -79,7 +79,7 @@ object Disassembler {
     }
 
     fun disassembleSegments(initialState: State): List<Segment> {
-        val mapping = HashMap<Address, Segment>()
+        val mapping = HashMap<SnesAddress, Segment>()
         val queue = ArrayDeque<State>()
 
         val segments = ArrayList<Segment>()
@@ -119,12 +119,12 @@ object Disassembler {
         return segments
     }
 
-    fun disassembleSegment(initialState: State, mapping: MutableMap<Address, Segment>): Segment {
+    fun disassembleSegment(initialState: State, mapping: MutableMap<SnesAddress, Segment>): Segment {
         val instructions = ArrayList<Instruction>()
         var lastState = initialState
 
         val queue = ArrayDeque<State>()
-        val seen = HashSet<Address>()
+        val seen = HashSet<SnesAddress>()
 
         fun finalize(segment: Segment): Segment {
             instructions.forEach {
