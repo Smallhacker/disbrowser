@@ -5,40 +5,62 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 interface RomData {
-    val size: Int
+    val size: UInt
 
-    operator fun get(address: Int): UByte
+    operator fun get(address: UInt): UByte
 
-    fun range(start: Int, length: Int): RomData = RomRange(this, start, length)
+    fun range(start: UInt, length: UInt): RomData = RomRange(this, start, length)
 
-    fun asSequence(): Sequence<UByte> = (0 until size).asSequence().map { get(it) }
+    fun asSequence(): Sequence<UByte> = (0u until size).asSequence().map { this[it] }
 
     companion object {
-        fun load(path: Path): RomData = Rom(Files.readAllBytes(path))
+        fun load(path: Path): RomData = ArrayRomData(Files.readAllBytes(path).toUByteArray())
     }
 }
 
-fun RomData.getWord(address: Int): UWord = get(address).toWord() or (get(address + 1).toWord() left 8)
+fun romData(vararg bytes: UByte): RomData = ArrayRomData(bytes)
 
-private class Rom(private val bytes: ByteArray): RomData {
-    override val size = bytes.size
+fun RomData.getWord(address: UInt) = joinBytes(this[address], this[address + 1u]).toUShort()
+fun RomData.getLong(address: UInt) = joinBytes(this[address], this[address + 1u], this[address + 2u]).toUInt24()
 
-    override fun get(address: Int): UByte {
-        checkRange(address)
-        return uByte(bytes[address].toInt())
+private class ArrayRomData(private val bytes: UByteArray) : RomData {
+    override val size = bytes.size.toUInt()
+
+    override fun get(address: UInt) = rangeChecked(address) {
+        bytes[address.toInt()]
     }
 
 }
 
-private class RomRange(private val parent: RomData, private val start: Int, override val size: Int): RomData {
-    override fun get(address: Int): UByte {
-        checkRange(address)
-        return parent[start + address]
+private class RomRange(private val parent: RomData, private val start: UInt, override val size: UInt) : RomData {
+    override fun get(address: UInt) = rangeChecked(address) {
+        parent[start + address]
     }
 }
 
-private fun RomData.checkRange(address: Int) {
-    if (address < 0 || address >= size) {
+private fun <T> RomData.rangeChecked(address: UInt, action: () -> T): T {
+    if (address >= size) {
         throw IndexOutOfBoundsException("Index $address out of range: [0, $size)")
+    }
+    return action()
+}
+
+private class ReindexedRomData(
+        private val parent: RomData,
+        override val size: UInt,
+        private val mapper: (UInt) -> UInt
+) : RomData {
+    override fun get(address: UInt) = rangeChecked(address) {
+        val mapped = mapper(address)
+        parent[mapped]
+    }
+}
+
+fun RomData.deinterleave(entries: UInt, vararg startOffsets: UInt): RomData {
+    val fieldCount = startOffsets.size.toUInt()
+    return ReindexedRomData(this, entries * fieldCount) {
+        val entry = it / fieldCount
+        val field = it.rem(fieldCount)
+        startOffsets[field.toInt()] + entry
     }
 }

@@ -1,13 +1,20 @@
 package com.smallhacker.disbrowser.asm
 
-class Disassembly(lines: List<Instruction>) : Iterable<Instruction> {
-    override fun iterator() = lines.values.iterator() as Iterator<Instruction>
+class Disassembly(lines: List<CodeUnit>) : Iterable<CodeUnit> {
+    override fun iterator() = lineList.iterator() as Iterator<CodeUnit>
 
-    private val lines = LinkedHashMap<Address, Instruction>()
+    private val knownAddresses = HashSet<Address>()
+    private val lineList = ArrayList<CodeUnit>()
 
     init {
-        lines.forEach { this.lines[it.address] = it }
+        lines.forEach {
+            val address = it.address
+            if (address != null) {
+                knownAddresses += address
+            }
+            lineList.add(it)
+        }
     }
 
-    operator fun contains(address: Address) = address in lines
+    operator fun contains(address: Address) = address in knownAddresses
 }

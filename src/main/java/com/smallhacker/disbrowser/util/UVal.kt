@@ -27,27 +27,27 @@ class UVal<U : UType>(value: Int, val type: U) : Comparable<UVal<U>> {
     //fun value(value: Int) = UVal(value, type)
     //fun mutate(mutator: (Int) -> Int) = UVal(mutator(value), type)
 
-    object U1 : UType(1, "UByte")
-    object U2 : UType(2, "UWord")
-    object U3 : UType(3, "ULong")
+    object U1 : UType(1, "OldUByte")
+    object U2 : UType(2, "OldUWord")
+    object U3 : UType(3, "OldULong")
 }
 
 inline fun <reified U: UVal<*>> U.value(value: Int): U = UVal(value, type) as U
 inline infix fun <reified U: UVal<*>> U.mutate(mutator: (Int) -> Int): U = value(mutator(value))
 
-typealias UByte = UVal<UVal.U1>
-typealias UWord = UVal<UVal.U2>
-typealias ULong = UVal<UVal.U3>
+typealias OldUByte = UVal<UVal.U1>
+typealias OldUWord = UVal<UVal.U2>
+typealias OldULong = UVal<UVal.U3>
 
 fun UVal<*>.toByte() = uByte(value)
 fun UVal<*>.toWord() = uWord(value)
 fun UVal<*>.toLong() = uLong(value)
 
-private val UBYTE_CACHE = Array(256) { UByte(it, UVal.U1) }
+private val UBYTE_CACHE = Array(256) { OldUByte(it, UVal.U1) }
 
-fun uByte(value: Int): UByte = UBYTE_CACHE[value and 0xFF]
-fun uWord(value: Int): UWord = UVal(value, UVal.U2)
-fun uLong(value: Int): ULong = UVal(value, UVal.U3)
+fun uByte(value: Int): OldUByte = UBYTE_CACHE[value and 0xFF]
+fun uWord(value: Int): OldUWord = UVal(value, UVal.U2)
+fun uLong(value: Int): OldULong = UVal(value, UVal.U3)
 
 inline infix fun <reified U: UVal<V>, V: UType> U.left(count: Int): U = mutate { it shl count }
 inline infix fun <reified U: UVal<V>, V: UType> U.right(count: Int): U = mutate { it ushr count }

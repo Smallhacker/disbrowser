@@ -1,0 +1,64 @@
+[
+  {
+    "address": 32768,
+    "label": "ResetVector",
+    "comment": null,
+    "flags": []
+  },
+  {
+    "address": 32820,
+    "label": "MainGameLoop",
+    "comment": null,
+    "flags": []
+  },
+  {
+    "address": 32949,
+    "label": "JumpToGameMode",
+    "comment": null,
+    "flags": []
+  },
+  {
+    "address": 165840,
+    "label": null,
+    "comment": null,
+    "flags": [
+      {
+        "flagType": "JslTableRoutine",
+        "entries": 4
+      }
+    ]
+  },
+  {
+    "address": 32966,
+    "label": null,
+    "comment": null,
+    "flags": [
+      {
+        "flagType": "JmpIndirectLongInterleavedTable",
+        "start": 32865,
+        "entries": 28
+      }
+    ]
+  },
+  {
+    "address": 835861,
+    "label": null,
+    "comment": null,
+    "flags": [
+      {
+        "flagType": "JslTableRoutine",
+        "entries": 12
+      }
+    ]
+  },
+  {
+    "address": 34716,
+    "label": null,
+    "comment": null,
+    "flags": [
+      {
+        "flagType": "NonReturningRoutine"
+      }
+    ]
+  }
+]

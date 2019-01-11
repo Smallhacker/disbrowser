@@ -1,6 +1,6 @@
 package com.smallhacker.disbrowser.asm
 
-enum class Mnemonic {
+enum class Mnemonic(private val nameOverride: String? = null) {
     ADC, AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRA,
     BRK, BRL, BVC, BVS, CLC, CLD, CLI, CLV, CMP, COP, CPX,
     CPY, DEC, DEX, DEY, EOR, INC, INX, INY, JMP, JML, JSL,
@@ -11,5 +11,7 @@ enum class Mnemonic {
     TCS, TDC, TRB, TSB, TSC, TSX, TXA, TXS, TXY, TYA, TYX,
     WAI, WDM, XBA, XCE,
 
-    DB, DW, DL
+    DB(".db"), DW(".dw"), DL(".dl");
+
+    val displayName get() = nameOverride ?: name
 }

@@ -107,6 +107,8 @@ fun a(inner: InnerHtml = {}) = parent("a", inner)
 fun HtmlArea.a(inner: InnerHtml = {}) = com.smallhacker.disbrowser.a(inner).appendTo(parent)
 fun script(inner: InnerHtml = {}) = parent("script", inner)
 fun HtmlArea.script(inner: InnerHtml = {}) = com.smallhacker.disbrowser.script(inner).appendTo(parent)
+fun input(type: String = "text", value: String = "") = leaf("input").attr("type", type).attr("value", value)
+fun HtmlArea.input(type: String = "text", value: String = "") = com.smallhacker.disbrowser.input(type, value).appendTo(parent)
 
 fun HtmlNode.appendTo(node: HtmlNode) = apply { node.append(this) }
 fun HtmlNode.addClass(c: String?) = attrAdd("class", c)

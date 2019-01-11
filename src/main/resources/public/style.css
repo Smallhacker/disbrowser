@@ -93,3 +93,15 @@ tr.line-active {
 .routine-end > td {
     border-bottom: 1px solid black;
 }
+
+.field-editable {
+    font-family: monospace;
+    border: none;
+    background: none;
+    padding: 0;
+    width: 100%;
+}
+
+.field-comment {
+    width: 500px;
+}

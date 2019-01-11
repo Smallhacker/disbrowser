@@ -16,7 +16,7 @@ object Disassembler {
         }
         tryAdd(initialState)
 
-        val instructions = ArrayList<Instruction>()
+        val instructions = ArrayList<CodeUnit>()
         while (queue.isNotEmpty()) {
             val state = queue.remove()
 
@@ -26,17 +26,21 @@ object Disassembler {
             var stop = (ins.opcode.continuation == Continuation.NO) or
                     (ins.opcode.mode.instructionLength(state) == null)
 
-            metadata[ins.address]?.flags?.forEach {
-                if (it is JmpIndirectLongInterleavedTable) {
+            metadata[ins.address]?.flags?.forEach { flag ->
+                if (flag is JmpIndirectLongInterleavedTable) {
                     if (global) {
-                        it.readTable(state.data)
+                        flag.readTable(state.data)
                                 .map { ins.postState.copy(address = it) }
                                 .forEach { tryAdd(it) }
                     }
+
+                    flag.generateCode(ins)
+                            .forEach { instructions.add(it) }
+
                     stop = true
-                } else if (it is JslTableRoutine) {
+                } else if (flag is JslTableRoutine) {
                     if (global) {
-                        it.readTable(ins.postState)
+                        flag.readTable(ins.postState)
                                 .map { ins.postState.copy(address = it) }
                                 .forEach { tryAdd(it) }
                     }
@@ -68,7 +72,7 @@ object Disassembler {
         }
 
         val instructionList = instructions
-                .sortedBy { it.address }
+                .sortedBy { it.presentedAddress }
                 .toList()
 
         return Disassembly(instructionList)
@@ -160,7 +164,7 @@ object Disassembler {
     private fun disassembleInstruction(state: State): Instruction {
         val pc = state.address.pc
         val opcode = Opcode.opcode(state.data[pc])
-        val length = opcode.mode.instructionLength(state) ?: 1
+        val length = opcode.mode.instructionLength(state) ?: 1u
         val bytes = state.data.range(pc, length)
         return Instruction(bytes, opcode, state)
     }

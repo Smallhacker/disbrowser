@@ -2,17 +2,16 @@ package com.smallhacker.disbrowser.asm
 
 import com.smallhacker.disbrowser.ImmStack
 import com.smallhacker.disbrowser.immStack
-import com.smallhacker.disbrowser.util.UByte
 
 data class State(val origin: Instruction? = null, val data: RomData, val address: Address, val flags: VagueNumber = VagueNumber(), val stack: ImmStack<VagueNumber> = immStack()) {
-    val m: Boolean? get() = flags.getBoolean(0x20)
-    val x: Boolean? get() = flags.getBoolean(0x10)
+    val m: Boolean? get() = flags.getBoolean(0x20u)
+    val x: Boolean? get() = flags.getBoolean(0x10u)
 
-    val mWidth: Int? get() = toWidth(m)
-    val xWidth: Int? get() = toWidth(x)
+    val mWidth: UInt? get() = toWidth(m)
+    val xWidth: UInt? get() = toWidth(x)
 
-    fun sep(i: UByte) = withFlags(flags.withBits(i.value))
-    fun rep(i: UByte) = withFlags(flags.withoutBits(i.value))
+    fun sep(i: UByte) = withFlags(flags.withBits(i.toUInt()))
+    fun rep(i: UByte) = withFlags(flags.withoutBits(i.toUInt()))
     fun uncertain() = withFlags(VagueNumber())
 
     private fun withFlags(flags: VagueNumber) = copy(flags = flags)
@@ -20,28 +19,28 @@ data class State(val origin: Instruction? = null, val data: RomData, val address
     fun mutateAddress(mutator: (Address) -> Address) = copy(address = mutator(address))
     fun withOrigin(instruction: Instruction?) = copy(origin = instruction)
 
-    fun push(value: Int) = push(VagueNumber(value))
+    fun push(value: UInt) = push(VagueNumber(value))
     fun push(value: VagueNumber) = copy(stack = stack.push(value))
-    fun pushUnknown(count: Int? = 1): State {
+    fun pushUnknown(count: UInt? = 1u): State {
         if (count == null) {
             return copy(stack = immStack())
         }
 
         var stack = this.stack
-        for (i in 1..count) {
+        for (i in 1u..count) {
             stack = stack.push(VagueNumber())
         }
         return copy(stack = stack)
     }
 
     fun pull() = (stack.top ?: VagueNumber()) to copy(stack = stack.pop())
-    fun pull(count: Int?): State {
+    fun pull(count: UInt?): State {
         if (count == null) {
             return copy(stack = immStack())
         }
 
         var stack = this.stack
-        for (i in 1..count) {
+        for (i in 1u..count) {
             stack = stack.pop()
         }
         return copy(stack = stack)
@@ -61,20 +60,20 @@ data class State(val origin: Instruction? = null, val data: RomData, val address
 
     private fun stackByteToString(v: VagueNumber): String {
         if (v.certain) {
-            return String.format("%02x", v.value)
+            return String.format("%02x", v.value.toInt())
         }
 
-        if (v.certainty == 0) {
+        if (v.certainty == 0u) {
             return "??"
         }
 
         val c = v.certainty
-        val high = (c and 0xF0) != 0
-        val low = (c and 0x0F) != 0
+        val high = (c and 0xF0u) != 0u
+        val low = (c and 0x0Fu) != 0u
 
         return StringBuilder()
-                .append(if (high) String.format("%x", (v.value ushr 4) and 0xF) else "?")
-                .append(if (low) String.format("%x", v.value and 0xF) else "?")
+                .append(if (high) String.format("%x", ((v.value shr 4) and 0xFu).toInt()) else "?")
+                .append(if (low) String.format("%x", (v.value and 0xFu).toInt()) else "?")
                 .toString()
     }
 
@@ -100,14 +99,14 @@ data class State(val origin: Instruction? = null, val data: RomData, val address
             return out.toString()
         }
 
-    private fun toWidth(flag: Boolean?): Int? = when (flag) {
+    private fun toWidth(flag: Boolean?): UInt? = when (flag) {
         null -> null
-        true -> 1
-        false -> 2
+        true -> 1u
+        false -> 2u
     }
 }
 
-fun State.pushByte(value: Byte) = this.push(VagueNumber(value.toInt()))
+fun State.pushByte(value: Byte) = this.push(VagueNumber(value.toUInt()))
 fun State.pull(consumer: State.(VagueNumber) -> State): State {
     val (value, state) = this.pull()
     return consumer(state, value)

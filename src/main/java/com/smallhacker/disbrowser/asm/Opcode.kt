@@ -4,7 +4,7 @@ import java.util.HashMap
 
 import com.smallhacker.disbrowser.asm.Mnemonic.*
 import com.smallhacker.disbrowser.asm.Mode.*
-import com.smallhacker.disbrowser.util.UByte
+import com.smallhacker.disbrowser.util.OldUByte
 
 typealias SegmentEnder = Instruction.() -> SegmentEnd?
 
@@ -14,7 +14,7 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
     private var _branch = false
 
     val operandIndex
-        get() = if (mode.dataMode) 0 else 1
+        get() = if (mode.dataMode) 0u else 1u
 
     val continuation: Continuation
         get() = _continuation
@@ -57,7 +57,7 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
         private val OPCODES: Array<Opcode>
 
         fun opcode(byteValue: UByte): Opcode {
-            return OPCODES[byteValue.value]
+            return OPCODES[byteValue.toInt()]
         }
 
         init {
@@ -135,8 +135,8 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
             add(0xF8, SED, IMPLIED, alwaysContinue)
             add(0xD8, CLD, IMPLIED, alwaysContinue)
             add(0xB8, CLV, IMPLIED, alwaysContinue)
-            add(0xE2, SEP, IMMEDIATE_8, alwaysContinue) { it.preState.sep(it.bytes[1]) }
-            add(0xC2, REP, IMMEDIATE_8, alwaysContinue) { it.preState.rep(it.bytes[1]) }
+            add(0xE2, SEP, IMMEDIATE_8, alwaysContinue) { it.preState.sep(it.bytes[1u]) }
+            add(0xC2, REP, IMMEDIATE_8, alwaysContinue) { it.preState.rep(it.bytes[1u]) }
             add(0xFB, XCE, IMPLIED, alwaysContinue)
 
             add(0xC1, CMP, DIRECT_X_INDIRECT, alwaysContinue)
@@ -218,11 +218,11 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
             add(0xFA, PLX, IMPLIED, alwaysContinue) { it.preState.pull(it.preState.xWidth) }
             add(0x7A, PLY, IMPLIED, alwaysContinue) { it.preState.pull(it.preState.xWidth) }
 
-            add(0x8B, PHB, IMPLIED, alwaysContinue) { it.preState.pushUnknown(1) }
-            add(0xAB, PLB, IMPLIED, alwaysContinue) { it.preState.pull(1) }
-            add(0x0B, PHD, IMPLIED, alwaysContinue) { it.preState.pushUnknown(1) }
-            add(0x2B, PLD, IMPLIED, alwaysContinue) { it.preState.pull(1) }
-            add(0x4B, PHK, IMPLIED, alwaysContinue) { it.preState.push(it.address.value shr 16) }
+            add(0x8B, PHB, IMPLIED, alwaysContinue) { it.preState.pushUnknown(1u) }
+            add(0xAB, PLB, IMPLIED, alwaysContinue) { it.preState.pull(1u) }
+            add(0x0B, PHD, IMPLIED, alwaysContinue) { it.preState.pushUnknown(1u) }
+            add(0x2B, PLD, IMPLIED, alwaysContinue) { it.preState.pull(1u) }
+            add(0x4B, PHK, IMPLIED, alwaysContinue) { it.preState.push((it.address.value shr 16).toUInt()) }
             add(0x08, PHP, IMPLIED, alwaysContinue) { it.preState.push(it.preState.flags) }
             add(0x28, PLP, IMPLIED, alwaysContinue) { it.preState.pull { copy(flags = it) } }
 

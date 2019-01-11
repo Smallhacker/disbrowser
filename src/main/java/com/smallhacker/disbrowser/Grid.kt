@@ -59,28 +59,34 @@ class Grid {
                 .first()
     }
 
-    fun add(ins: Instruction, metadata: MetadataLine?, disassembly: Disassembly) {
-        val address = ins.address
+    fun add(ins: CodeUnit, metadata: Metadata, disassembly: Disassembly) {
+        val insMetadata = ins.address ?.let { metadata[it] }
+
+        val actualAddress = ins.address
+        val presentedAddress = ins.presentedAddress
 
         if (nextAddress != null) {
-            if (address != nextAddress) {
+            if (presentedAddress != nextAddress) {
                 addDummy()
             }
         }
-        nextAddress = ins.postState.address
+        nextAddress = ins.nextPresentedAddress
 
         val y = (height++)
-        addresses[address] = y
+        addresses[presentedAddress] = y
 
         add(y, ins.address,
-                text(ins.address.toFormattedString()),
+                text(actualAddress?.toFormattedString() ?: ""),
                 text(ins.bytesToString()),
-                text(metadata?.label?.plus(":") ?: ""),
+                input(value = insMetadata?.label ?: "")
+                        .addClass("field-label")
+                        .addClass("field-editable")
+                        .attr("data-field", "label")
+                        .attr("data-address", presentedAddress.value.toString()),
                 fragment {
-                    text("${ins.opcode.mnemonic}")
-                    text(ins.lengthSuffix)
+                    text(ins.printOpcodeAndSuffix())
                     text(" ")
-                    val operands = ins.opcode.mode.print(ins)
+                    var operands = ins.printOperands()
 
                     val link = ins.linkedState
                     if (link == null) {
@@ -93,13 +99,19 @@ class Grid {
                             else -> "/${link.address.toSimpleString()}/${link.urlString}"
                         }
 
+                        operands = metadata[link.address]?.label ?: operands
 
                         a {
                             text(operands)
                         }.attr("href", url)
                     }
                 },
-                text(ins.postState.toString())
+                text(ins.postState?.toString() ?: ""),
+                input(value = insMetadata?.comment ?: "")
+                        .addClass("field-comment")
+                        .addClass("field-editable")
+                        .attr("data-field", "comment")
+                        .attr("data-address", presentedAddress.value.toString())
         )
 
         if (ins.opcode.continuation == Continuation.NO) {
@@ -109,7 +121,7 @@ class Grid {
 
     private fun addDummy() {
         val y = (height++)
-        add(y, null, null, null, null, text("..."), null)
+        add(y, null, null, null, null, text("..."), null, null)
     }
 
     private fun add(y: Int, address: Address?,
@@ -117,7 +129,8 @@ class Grid {
                     cBytes: HtmlNode?,
                     cLabel: HtmlNode?,
                     cCode: HtmlNode?,
-                    cState: HtmlNode?
+                    cState: HtmlNode?,
+                    cComment: HtmlNode?
     ) {
         if (address != null) {
             rowId[y] = address.toSimpleString()
@@ -127,9 +140,15 @@ class Grid {
         content[2 to y] = cLabel
         content[3 to y] = cCode
         content[4 to y] = cState
+        content[5 to y] = cComment
     }
 
     fun output(): HtmlNode {
+        val contentMaxX = content.keys.asSequence()
+                .map { it.first }
+                .max()
+                ?: -1
+
         return table {
             for (y in 0 until height) {
                 tr {
@@ -145,7 +164,7 @@ class Grid {
                             arrowCells[x to y]?.appendTo(parent)
                         }.addClass(cssClass)
                     }
-                    for (x in 4..4) {
+                    for (x in 4..contentMaxX) {
                         val cssClass = cellClasses[x to y]
                         td {
                             content[x to y]?.appendTo(parent)

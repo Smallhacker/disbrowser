@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "amd",
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "removeComments": true,
+    "sourceMap": true,
+    "outFile": "../resources/public/disbrowser.js"
+  },
+  "include": [
+    "*.ts"
+  ]
+}

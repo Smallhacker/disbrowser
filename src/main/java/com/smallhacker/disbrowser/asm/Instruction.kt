@@ -2,86 +2,107 @@ package com.smallhacker.disbrowser.asm
 
 import com.smallhacker.disbrowser.util.*
 
-class Instruction(val bytes: RomData, val opcode: Opcode, val preState: State) {
-    val address: Address
-        get() = preState.address
+interface CodeUnit {
+    val address: Address?
+    val relativeAddress: Address
+    val presentedAddress: Address
+    val nextPresentedAddress: Address
 
-    val postState = opcode.mutate(this)
-            .mutateAddress { it + bytes.size }
+    val linkedState: State?
+    val preState: State?
+    val postState: State?
+
+    val bytes: RomData
+    val opcode: Opcode
+    val lengthSuffix: String?
+
+    fun operandByte(index: UInt): UByte = bytes[opcode.operandIndex + index]
+    fun printOpcodeAndSuffix(): String {
+        val mnemonic = opcode.mnemonic.displayName
+        val suffix = lengthSuffix ?: ""
+        return "$mnemonic$suffix"
+    }
+    fun printOperands() = opcode.mode.print(this)
+
+    fun bytesToString(): String {
+        return bytes.asSequence()
+                .map { toHex(it.toUInt(), 1u) }
+                .joinToString(" ")
+                .padEnd(11, ' ')
+    }
+
+    val operandLength: UInt?
+
+    val signedByte get() = byte.toByte()
+
+    val signedWord get() = word.toShort()
+
+    val byte get() = operandByte(0u)
+
+    val byte2 get() = operandByte(1u)
+
+    val word get() = joinBytes(operandByte(0u), operandByte(1u)).toUShort()
+
+    val long get() = joinBytes(operandByte(0u), operandByte(1u), operandByte(2u)).toUInt24()
+
+    val value
+        get() = when (operandLength?.toInt()) {
+            0 -> 0u
+            1 -> byte.toUInt()
+            2 -> word.toUInt()
+            3 -> long.toUInt()
+            else -> null
+        }
+}
+
+class DataBlock(
+        override val opcode: Opcode,
+        override val bytes: RomData,
+        override val presentedAddress: Address,
+        override val relativeAddress: Address,
+        override val linkedState: State?
+) : CodeUnit {
+    override val nextPresentedAddress: Address
+        get() = presentedAddress + operandLength.toInt()
+    override val operandLength get() = bytes.size
+
+    override val address: Address? = null
+    override val preState: State? = null
+    override val postState: State? = null
+    override val lengthSuffix: String? = null
+}
+
+class Instruction(override val bytes: RomData, override val opcode: Opcode, override val preState: State) : CodeUnit {
+    override val address: Address get() = preState.address
+    override val relativeAddress get() = address
+    override val presentedAddress get() = address
+    override val nextPresentedAddress get() = postState.address
+
+    override val postState = opcode.mutate(this)
+            .mutateAddress { it + bytes.size.toInt() }
             .withOrigin(this)
-    val linkedState = link()?.let { link ->
+    override val linkedState = link()?.let { link ->
         opcode.mutate(this)
                 .mutateAddress { link }
                 .withOrigin(this)
     }
 
-    operator fun get(index: Int): UByte {
-        return bytes[index]
-    }
-
-    val signedByte: Int
-        get() = byte.value.toByte().toInt()
-
-    val signedWord: Int
-        get() = word.value.toShort().toInt()
-
-    val byte: UByte
-        get() = get(1)
-
-    val byte2: UByte
-        get() = get(2)
-
-    val dataByte: UByte
-        get() = get(0)
-
-    val word: UWord
-        get() = (get(2).toWord() left 8) or get(1).toWord()
-
-    val dataWord: UWord
-        get() = (get(1).toWord() left 8) or get(0).toWord()
-
-    val long: ULong
-        get() = (get(3).toLong() left 16) or (get(2).toLong() left 8) or get(1).toLong()
-
-    val dataLong: ULong
-        get() = (get(2).toLong() left 16) or (get(1).toLong() left 8) or get(0).toLong()
-
-    fun bytesToString(): String {
-        return bytes.asSequence().map { it.toHex() }.joinToString(" ").padEnd(11, ' ')
-    }
-
-    //val value: ULong
-    //    get() {
-    //        val len = operandLength
-    //        val start = opcode.operandIndex
-
-    //}
-
-    //fun getOperand(index: Int, length: Int) {
-    //    val v = uLong(0)
-    //    for (i in (index + length) downTo index)
-    //}
-
-    val lengthSuffix: String
+    override val lengthSuffix: String?
         get() {
-            return when (opcode.mode) {
-                Mode.IMPLIED -> ""
-                Mode.IMMEDIATE_8 -> ""
-                Mode.IMMEDIATE_16 -> ""
-                Mode.RELATIVE -> ""
-                Mode.RELATIVE_LONG -> ""
-                Mode.BLOCK_MOVE -> ""
-                else -> when (operandLength) {
-                    null -> ".?"
-                    1 -> ".b"
-                    2 -> ".w"
-                    3 -> ".l"
-                    else -> ""
-                }
+            if (!opcode.mode.showLengthSuffix) {
+                return null
+            }
+
+            return when (operandLength?.toInt()) {
+                null -> ".?"
+                1 -> ".b"
+                2 -> ".w"
+                3 -> ".l"
+                else -> null
             }
         }
 
-    private val operandLength
+    override val operandLength
         get() = opcode.mode.operandLength(preState)
 
     private fun link(): Address? {
@@ -90,17 +111,17 @@ class Instruction(val bytes: RomData, val opcode: Opcode, val preState: State) {
         }
 
         return when (opcode.mode) {
-            Mode.ABSOLUTE -> address.withinBank(word.value)
-            Mode.ABSOLUTE_LONG -> Address(long.value)
-            Mode.RELATIVE -> address + 2 + signedByte
-            Mode.RELATIVE_LONG -> address + 3 + signedWord
-            Mode.DATA_WORD -> address.withinBank(dataWord.value)
-            Mode.DATA_LONG -> Address(dataLong.value)
+            Mode.ABSOLUTE -> relativeAddress.withinBank(word)
+            Mode.ABSOLUTE_LONG -> Address(long)
+            Mode.RELATIVE -> relativeAddress + 2 + signedByte.toInt()
+            Mode.RELATIVE_LONG -> relativeAddress + 3 + signedWord.toInt()
+            Mode.DATA_WORD -> relativeAddress.withinBank(word)
+            Mode.DATA_LONG -> Address(long)
             else -> null
         }
     }
 
     override fun toString(): String {
-        return "$address ${bytesToString()} ${opcode.mnemonic} ${opcode.mode.print(this).padEnd(100, ' ')} ($preState -> $postState)"
+        return "$address ${bytesToString()} ${opcode.mnemonic.displayName} ${opcode.mode.print(this).padEnd(100, ' ')} ($preState -> $postState)"
     }
 }
