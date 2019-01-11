@@ -1,64 +1,39 @@
-[
-  {
-    "address": 32768,
-    "label": "ResetVector",
-    "comment": null,
-    "flags": []
+{
+  "008000" : {
+    "label" : "ResetVector"
   },
-  {
-    "address": 32820,
-    "label": "MainGameLoop",
-    "comment": null,
-    "flags": []
+  "008034" : {
+    "label" : "MainGameLoop"
   },
-  {
-    "address": 32949,
-    "label": "JumpToGameMode",
-    "comment": null,
-    "flags": []
+  "0080b5" : {
+    "label" : "JumpToGameMode"
   },
-  {
-    "address": 165840,
-    "label": null,
-    "comment": null,
-    "flags": [
-      {
-        "flagType": "JslTableRoutine",
-        "entries": 4
-      }
-    ]
+  "0080c6" : {
+    "flags" : [ {
+      "flagType" : "JmpIndirectLongInterleavedTable",
+      "start" : "008061",
+      "entries" : 28
+    } ]
   },
-  {
-    "address": 32966,
-    "label": null,
-    "comment": null,
-    "flags": [
-      {
-        "flagType": "JmpIndirectLongInterleavedTable",
-        "start": 32865,
-        "entries": 28
-      }
-    ]
+  "00841e" : {
+    "label" : "ClearOam",
+    "comment" : "Test3"
   },
-  {
-    "address": 835861,
-    "label": null,
-    "comment": null,
-    "flags": [
-      {
-        "flagType": "JslTableRoutine",
-        "entries": 12
-      }
-    ]
+  "00879c" : {
+    "flags" : [ {
+      "flagType" : "NonReturningRoutine"
+    } ]
   },
-  {
-    "address": 34716,
-    "label": null,
-    "comment": null,
-    "flags": [
-      {
-        "flagType": "NonReturningRoutine"
-      }
-    ]
+  "0287d0" : {
+    "flags" : [ {
+      "flagType" : "JslTableRoutine",
+      "entries" : 4
+    } ]
+  },
+  "0cc115" : {
+    "flags" : [ {
+      "flagType" : "JslTableRoutine",
+      "entries" : 12
+    } ]
   }
-]
+}

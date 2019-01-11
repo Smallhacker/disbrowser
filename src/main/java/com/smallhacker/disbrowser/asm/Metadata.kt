@@ -4,20 +4,29 @@ import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.smallhacker.disbrowser.util.joinBytes
 import com.smallhacker.disbrowser.util.toUInt24
+import java.util.*
 
-class Metadata() {
-    private val lines = HashMap<Address, MetadataLine>()
+class Metadata {
+    private val lines: MutableMap<Address, MetadataLine>
 
-    @JsonValue
-    private fun linesAsList() = lines.values.toList()
-
-    @JsonCreator
-    private constructor(@JsonProperty lines: List<MetadataLine>) : this() {
-        lines.forEach { add(it) }
+    constructor() {
+        this.lines = HashMap()
     }
 
-    fun add(line: MetadataLine): Metadata {
-        lines[line.address] = line
+    @JsonCreator
+    private constructor(@JsonProperty lines: Map<Address, MetadataLine>) {
+        this.lines = HashMap(lines)
+    }
+
+    @JsonValue
+    private fun serialize() = TreeMap(lines)
+
+    operator fun set(address: Address, line: MetadataLine?): Metadata {
+        if (line == null) {
+            lines.remove(address)
+        } else {
+            lines[address] = line
+        }
         return this
     }
 
@@ -25,27 +34,17 @@ class Metadata() {
         return lines[address]
     }
 
-    fun getOrAdd(address: Address): MetadataLine {
+    operator fun contains(address: Address) = lines[address] != null
+
+    fun getOrCreate(address: Address): MetadataLine {
         val line = this[address]
         if (line != null) {
             return line
         }
-        val newLine = MetadataLine(address)
-        add(newLine)
+        val newLine = MetadataLine()
+        this[address] = newLine
         return newLine
     }
-}
-
-fun Metadata.at(address: Int, runner: MetadataLine.() -> Unit) {
-    val line = MetadataLine(address(address))
-    this.add(line)
-    runner(line)
-}
-
-fun metadata(runner: Metadata.() -> Unit): Metadata {
-    val metadata = Metadata()
-    runner(metadata)
-    return metadata
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "flagType")

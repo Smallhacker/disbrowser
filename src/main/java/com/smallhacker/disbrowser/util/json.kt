@@ -14,9 +14,10 @@ interface JsonFile<T> {
     fun save(value: T)
 }
 
-inline fun <reified T> jsonFile(path: Path): JsonFile<T> {
+inline fun <reified T> jsonFile(path: Path, prettyPrint: Boolean = false): JsonFile<T> {
+    val writer = if (prettyPrint) jsonMapper.writerWithDefaultPrettyPrinter() else jsonMapper.writer()
     return object : JsonFile<T> {
         override fun load() = jsonMapper.readValue<T>(path.toFile())
-        override fun save(value: T) = jsonMapper.writeValue(path.toFile(), value)
+        override fun save(value: T) = writer.writeValue(path.toFile(), value)
     }
 }

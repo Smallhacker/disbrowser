@@ -78,11 +78,7 @@ class Grid {
         add(y, ins.address,
                 text(actualAddress?.toFormattedString() ?: ""),
                 text(ins.bytesToString()),
-                input(value = insMetadata?.label ?: "")
-                        .addClass("field-label")
-                        .addClass("field-editable")
-                        .attr("data-field", "label")
-                        .attr("data-address", presentedAddress.value.toString()),
+                editableField(presentedAddress, "label", insMetadata?.label),
                 fragment {
                     text(ins.printOpcodeAndSuffix())
                     text(" ")
@@ -107,16 +103,20 @@ class Grid {
                     }
                 },
                 text(ins.postState?.toString() ?: ""),
-                input(value = insMetadata?.comment ?: "")
-                        .addClass("field-comment")
-                        .addClass("field-editable")
-                        .attr("data-field", "comment")
-                        .attr("data-address", presentedAddress.value.toString())
+                editableField(presentedAddress, "comment", insMetadata?.comment)
         )
 
         if (ins.opcode.continuation == Continuation.NO) {
             rowClasses[y] = "routine-end"
         }
+    }
+
+    private fun editableField(address: Address, type: String, value: String?): HtmlNode {
+        return input(value = value ?: "")
+                .addClass("field-$type")
+                .addClass("field-editable")
+                .attr("data-field", type)
+                .attr("data-address", address.toSimpleString())
     }
 
     private fun addDummy() {

@@ -4,8 +4,7 @@ import com.smallhacker.disbrowser.HtmlNode
 import com.smallhacker.disbrowser.Service
 import com.smallhacker.disbrowser.asm.Address
 import com.smallhacker.disbrowser.asm.VagueNumber
-import com.smallhacker.disbrowser.util.toUInt24
-import com.smallhacker.disbrowser.util.tryParseInt
+import java.nio.charset.StandardCharsets
 import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.PathParam
@@ -31,16 +30,11 @@ class DisassemblyResource {
     @Produces(MediaType.TEXT_HTML)
     fun getIt(@PathParam("address") address: String, @PathParam("state") state: String): Response {
         return handle {
-            parseAddress(address)?.let {
+            Address.parse(address)?.let {
                 val flags = parseState(state)
                 Service.showDisassembly(it, flags)
             }
         }
-    }
-
-    private fun parseAddress(address: String): Address? {
-        return tryParseInt(address, 16)
-                ?.let { Address(it.toUInt24()) }
     }
 
     private fun handle(runner: () -> HtmlNode?): Response {
@@ -50,7 +44,9 @@ class DisassemblyResource {
             return if (disassembly == null)
                 Response.status(404).build()
             else
-                Response.ok(disassembly.toString(), MediaType.TEXT_HTML).build()
+                Response.ok(disassembly.toString().toByteArray(StandardCharsets.UTF_8))
+                        .encoding("UTF-8")
+                        .build()
         } catch (e: Exception) {
             e.printStackTrace()
             throw e

@@ -13,7 +13,7 @@ object Service {
     private val romName = "Zelda no Densetsu - Kamigami no Triforce (Japan)"
     private val romDir = Paths.get("""P:\Emulation\ROMs\SNES""")
     private val metaDir = Paths.get("""P:\Programming\dis-browser""")
-    private val metaFile = jsonFile<Metadata>(metaDir.resolve("$romName.json"))
+    private val metaFile = jsonFile<Metadata>(metaDir.resolve("$romName.json"), true)
     private val metadata by lazy { metaFile.load() }
 
     private val romData = lazy {
@@ -57,6 +57,7 @@ object Service {
             head {
                 title { text("Disassembly Browser") }
                 link {}.attr("rel", "stylesheet").attr("href", "/resources/style.css")
+                meta {}.attr("charset", "UTF-8")
             }
             body {
                 grid.output().appendTo(parent)
@@ -67,12 +68,23 @@ object Service {
 
     fun updateMetadata(address: Address, field: KMutableProperty1<MetadataLine, String?>, value: String) {
         if (value.isEmpty()) {
-            metadata[address]?.run {
-                field.set(this, null)
+            if (address in metadata) {
+                doUpdateMetadata(address, field, null)
             }
         } else {
-            field.set(metadata.getOrAdd(address), value)
+            doUpdateMetadata(address, field, value)
         }
+    }
+
+    private fun doUpdateMetadata(address: Address, field: KMutableProperty1<MetadataLine, String?>, value: String?) {
+        val line = metadata.getOrCreate(address)
+        field.set(line, value)
+
+        if (line.isEmpty()) {
+            metadata[address] = null
+        }
+
+        metaFile.save(metadata)
     }
 
 }

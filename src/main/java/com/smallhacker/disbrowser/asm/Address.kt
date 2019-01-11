@@ -1,14 +1,15 @@
 package com.smallhacker.disbrowser.asm
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import com.smallhacker.disbrowser.util.UInt24
 import com.smallhacker.disbrowser.util.toUInt24
+import com.smallhacker.disbrowser.util.tryParseInt
 
-data class Address(@JsonValue val value: UInt24): Comparable<Address> {
-    @JsonIgnore
+data class Address(val value: UInt24) : Comparable<Address> {
     val rom = (value and 0x8000u).toUInt() == 0u
-    @JsonIgnore
     val pc = snesToPc(value)
 
     operator fun plus(offset: Int) = Address(value + offset)
@@ -18,13 +19,21 @@ data class Address(@JsonValue val value: UInt24): Comparable<Address> {
 
     override fun toString(): String = toFormattedString()
     fun toFormattedString(): String = String.format("$%02x:%04x", (value shr 16).toInt(), (value and 0xFFFFu).toInt())
+    @JsonValue
     fun toSimpleString(): String = String.format("%06x", value.toInt())
 
     fun withinBank(value: UShort): Address = Address((this.value and 0xFF_0000u) or value.toUInt24())
 
     override fun compareTo(other: Address) = value.toUInt().compareTo(other.value.toUInt())
 
-    infix fun distanceTo(other: Address)= Math.abs(value.toInt() - other.value.toInt()).toUInt()
+    infix fun distanceTo(other: Address) = Math.abs(value.toInt() - other.value.toInt()).toUInt()
+
+    companion object {
+        @JvmStatic
+        @JsonCreator
+        fun parse(address: String): Address? = tryParseInt(address, 16)
+                ?.let { Address(it.toUInt24()) }
+    }
 }
 
 fun address(snesAddress: Int) = Address(snesAddress.toUInt24())

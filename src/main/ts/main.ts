@@ -1,5 +1,5 @@
 function center(el: HTMLElement) {
-    function documentOffsetTop (el: HTMLElement) {
+    function documentOffsetTop(el: HTMLElement) {
         let top = el.offsetTop;
         let parent = el.offsetParent;
         if (parent && parent instanceof HTMLElement) {
@@ -9,7 +9,7 @@ function center(el: HTMLElement) {
     }
 
     let top = documentOffsetTop(el) - (window.innerHeight / 2);
-    window.scrollTo( 0, top );
+    window.scrollTo(0, top);
 }
 
 function highlight(el: HTMLElement | null) {
@@ -45,8 +45,27 @@ function fromUrl() {
     return fromHash() || fromPath();
 }
 
+function xhr(url: string, method: string = "GET", body: (string | null) = null) {
+    return new Promise((resolve, reject) => {
+        let xhr = new XMLHttpRequest();
+        xhr.onload = () => {
+            if (xhr.status < 400) {
+                resolve(xhr);
+            } else {
+                reject(xhr);
+            }
+        };
+        xhr.onerror = () => reject(xhr);
+        xhr.onabort = () => reject(xhr);
+        xhr.open(method, url);
+        xhr.send(body);
+    });
+}
+
 highlight(fromUrl());
-window.addEventListener("hashchange", function () { highlight(fromHash()) }, false);
+window.addEventListener("hashchange", function () {
+    highlight(fromHash())
+}, false);
 
 let comments = document.getElementsByClassName("field-editable");
 for (let i = 0; i < comments.length; i++) {
@@ -54,9 +73,12 @@ for (let i = 0; i < comments.length; i++) {
     comment.addEventListener("change", e => {
         let target = <HTMLInputElement>(e.target);
         let field = target.dataset.field || "";
-        let address = parseInt(target.dataset.address || "-1");
+        let address = target.dataset.address;
         let value = (target).value;
-        alert(field + "/" + address + "=" + value);
+
+        xhr(`/rest/${address}/${field}`, "POST", value)
+            .catch((xhr: XMLHttpRequest) => alert("Error: HTTP " + xhr.status));
+
         return false;
     });
 }
