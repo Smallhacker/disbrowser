@@ -4,7 +4,6 @@ import java.util.HashMap
 
 import com.smallhacker.disbrowser.asm.Mnemonic.*
 import com.smallhacker.disbrowser.asm.Mode.*
-import com.smallhacker.disbrowser.util.OldUByte
 
 typealias SegmentEnder = Instruction.() -> SegmentEnd?
 
@@ -51,8 +50,10 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
         val DATA_WORD = Opcode(Mnemonic.DW, Mode.DATA_WORD, { null }, { it.preState })
         val DATA_LONG = Opcode(Mnemonic.DL, Mode.DATA_LONG, { null }, { it.preState })
 
-        val POINTER_WORD = Opcode(Mnemonic.DW, Mode.DATA_WORD, { null }, { it.preState }).linking()
-        val POINTER_LONG = Opcode(Mnemonic.DL, Mode.DATA_LONG, { null }, { it.preState }).linking()
+        val POINTER_WORD = Opcode(Mnemonic.DW, Mode.CODE_WORD, { null }, { it.preState }).linking()
+        val POINTER_LONG = Opcode(Mnemonic.DL, Mode.CODE_LONG, { null }, { it.preState }).linking()
+
+        val UNKNOWN_OPCODE: Opcode
 
         private val OPCODES: Array<Opcode>
 
@@ -79,6 +80,7 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
             val dynamicSubJumping: SegmentEnder = { stoppingSegmentEnd(address) }
             val returning: SegmentEnder = { returnSegmentEnd(address) }
 
+            UNKNOWN_OPCODE = Opcode(UNKNOWN, IMPLIED, alwaysStop, Instruction::preState).stop()
 
             add(0x00, BRK, IMMEDIATE_8, alwaysStop).stop()
             add(0x02, COP, IMMEDIATE_8, alwaysStop).stop()
@@ -100,14 +102,14 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
             add(0xF0, BEQ, RELATIVE, branching).branching()
             add(0x82, BRL, RELATIVE_LONG, alwaysBranching).stop().branching()
 
-            add(0x4C, JMP, ABSOLUTE, jumping).linking().stop()
+            add(0x4C, JMP, ABSOLUTE_CODE, jumping).linking().stop()
             add(0x5C, JML, ABSOLUTE_LONG, jumping).linking().stop()
             add(0x6C, JMP, ABSOLUTE_INDIRECT, dynamicJumping).stop()
             add(0x7C, JMP, ABSOLUTE_X_INDIRECT, dynamicJumping).stop()
             add(0xDC, JMP, ABSOLUTE_INDIRECT_LONG, dynamicJumping).stop()
 
             add(0x22, JSL, ABSOLUTE_LONG, subJumping).linking().mayStop()
-            add(0x20, JSR, ABSOLUTE, subJumping).linking().mayStop()
+            add(0x20, JSR, ABSOLUTE_CODE, subJumping).linking().mayStop()
             add(0xFC, JSR, ABSOLUTE_X_INDIRECT, dynamicSubJumping).mayStop()
 
             add(0x60, RTS, IMPLIED, returning).stop()

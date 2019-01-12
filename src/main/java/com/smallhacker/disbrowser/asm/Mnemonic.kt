@@ -11,7 +11,8 @@ enum class Mnemonic(private val nameOverride: String? = null, val alternativeNam
     TCS, TDC, TRB, TSB, TSC, TSX, TXA, TXS, TXY, TYA, TYX,
     WAI, WDM, XBA, XCE,
 
-    DB(nameOverride = ".db"), DW(nameOverride = ".dw"), DL(nameOverride = ".dl");
+    DB(nameOverride = ".db"), DW(nameOverride = ".dw"), DL(nameOverride = ".dl"),
+    UNKNOWN(nameOverride = "???");
 
     val displayName get() = nameOverride ?: name
 }

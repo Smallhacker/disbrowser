@@ -3,6 +3,7 @@
     "008000" : {
       "label" : "ResetVector"
     },
+    "00800a" : { },
     "00801b" : {
       "comment" : "\\ Turn off emulation mode"
     },

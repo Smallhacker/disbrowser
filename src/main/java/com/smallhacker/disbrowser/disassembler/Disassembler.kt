@@ -29,7 +29,8 @@ object Disassembler {
             metadata[ins.address]?.flags?.forEach { flag ->
                 if (flag is JmpIndirectLongInterleavedTable) {
                     if (global) {
-                        flag.readTable(state.data)
+                        flag.readTable(state.memory)
+                                .filterNotNull()
                                 .map { ins.postState.copy(address = it) }
                                 .forEach { tryAdd(it) }
                     }
@@ -41,6 +42,7 @@ object Disassembler {
                 } else if (flag is JslTableRoutine) {
                     if (global) {
                         flag.readTable(ins.postState)
+                                .filterNotNull()
                                 .map { ins.postState.copy(address = it) }
                                 .forEach { tryAdd(it) }
                     }
@@ -162,10 +164,14 @@ object Disassembler {
     }
 
     private fun disassembleInstruction(state: State): Instruction {
-        val pc = state.address.pc
-        val opcode = Opcode.opcode(state.data[pc])
+        val opcodeValue = state.memory[state.address] ?: return unreadableInstruction(state)
+        val opcode = Opcode.opcode(opcodeValue)
         val length = opcode.mode.instructionLength(state) ?: 1u
-        val bytes = state.data.range(pc, length)
+        val bytes = state.memory.range(state.address.value.toUInt(), length).validate()
+            ?: return unreadableInstruction(state)
         return Instruction(bytes, opcode, state)
     }
+
+    private fun unreadableInstruction(state: State) =
+            Instruction(EmptyMemorySpace, Opcode.UNKNOWN_OPCODE, state)
 }

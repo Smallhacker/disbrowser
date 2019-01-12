@@ -7,8 +7,6 @@ import com.smallhacker.disbrowser.util.toUInt24
 import com.smallhacker.disbrowser.util.tryParseInt
 
 data class SnesAddress(val value: UInt24) : Comparable<SnesAddress> {
-    val pc = snesToPc(value)
-
     operator fun plus(offset: Int) = SnesAddress(value + offset)
     operator fun minus(offset: Int) = SnesAddress(value - offset)
     operator fun inc() = plus(1)
@@ -34,9 +32,3 @@ data class SnesAddress(val value: UInt24) : Comparable<SnesAddress> {
 }
 
 fun address(snesAddress: Int) = SnesAddress(snesAddress.toUInt24())
-
-private fun snesToPc(value: UInt24): UInt {
-    // TODO: This is incredibly oversimplified. Anything that isn't a small LoROM will crash and burn
-    val intVal = value.toUInt()
-    return (intVal and 0x7FFFu) or ((intVal and 0x7F_0000u) shr 1)
-}

@@ -10,28 +10,27 @@ import kotlin.reflect.KMutableProperty1
 private val RESET_VECTOR_LOCATION = address(0x00_FFFC)
 
 object Service {
-    private val romName = "Zelda no Densetsu - Kamigami no Triforce (Japan)"
+    private const val romName = "Zelda no Densetsu - Kamigami no Triforce (Japan)"
     private val romDir = Paths.get("""P:\Emulation\ROMs\SNES""")
     private val metaDir = Paths.get("""P:\Programming\dis-browser""")
     private val metaFile = jsonFile<Metadata>(metaDir.resolve("$romName.json"), true)
     private val metadata by lazy { metaFile.load() }
 
-    private val romData = lazy {
+    private val snesMemory by lazy {
         val path = romDir.resolve("$romName.sfc")
-        RomData.load(path)
+        SnesLoRom(loadRomData(path))
     }
 
     fun showDisassemblyFromReset(): HtmlNode? {
-        val resetVectorLocation = RESET_VECTOR_LOCATION
-        val initialAddress = SnesAddress(romData.value.getWord(resetVectorLocation.pc).toUInt24())
+        val resetVector = snesMemory.getWord(RESET_VECTOR_LOCATION)
+        val fullResetVector = resetVector!!.toUInt24()
+        val initialAddress = SnesAddress(fullResetVector)
         val flags = VagueNumber(0x30u)
         return showDisassembly(initialAddress, flags)
     }
 
     fun showDisassembly(initialAddress: SnesAddress, flags: VagueNumber): HtmlNode? {
-        val rom = romData.value
-
-        val initialState = State(data = rom, address = initialAddress, flags = flags)
+        val initialState = State(memory = snesMemory, address = initialAddress, flags = flags)
         val disassembly = Disassembler.disassemble(initialState, metadata, false)
 
         return print(disassembly, metadata)

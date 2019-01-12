@@ -1,8 +1,11 @@
 package com.smallhacker.disbrowser.asm
 
-import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import com.smallhacker.disbrowser.util.joinBytes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.smallhacker.disbrowser.util.joinNullableBytes
 import com.smallhacker.disbrowser.util.toUInt24
 import java.util.*
 
@@ -63,20 +66,20 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
 ) : InstructionFlag {
     private val uEntries get() = entries.toUInt()
 
-    fun readTable(data: RomData): Sequence<SnesAddress> {
-        return (0u until uEntries)
+    fun readTable(data: MemorySpace): Sequence<SnesAddress?> {
+        return (0 until entries)
                 .asSequence()
-                .map { it + start.pc }
-                .map { pc -> joinBytes(data[pc], data[pc + uEntries], data[pc + uEntries + uEntries]).toUInt24() }
-                .map { SnesAddress(it) }
+                .map { start + it }
+                .map { address -> joinNullableBytes(data[address], data[address + entries], data[address + entries + entries])?.toUInt24() }
+                .map { pointer -> pointer?.let { SnesAddress(it) } }
     }
 
     fun generateCode(jumpInstruction: Instruction): Sequence<DataBlock> {
-        val table = jumpInstruction.preState.data.deinterleave(uEntries,
-                start.pc,
-                (start + entries).pc,
-                (start + (2u * uEntries).toInt()).pc
-        )
+        val table = jumpInstruction.preState.memory.deinterleave(uEntries,
+                start.value.toUInt(),
+                (start + entries).value.toUInt(),
+                (start + (2 * uEntries.toInt())).value.toUInt()
+        ).validate() ?: return emptySequence()
 
         return (0u until uEntries)
                 .asSequence()
@@ -93,11 +96,6 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
                                     .mutateAddress { SnesAddress(target) }
                                     .withOrigin(jumpInstruction)
                     )
-//                    Instruction(
-//                            data.range((start.value + offset).toUInt(), 3u),
-//                            Opcode.POINTER_LONG,
-//                            preState.mutateAddress { start -> start + offset.toInt() }
-//                    )
                 }
     }
 
@@ -108,13 +106,13 @@ class JslTableRoutine @JsonCreator constructor(
         @field:JsonProperty @JsonProperty private val entries: Int
 ) : InstructionFlag {
 
-    fun readTable(postJsr: State): Sequence<SnesAddress> {
-        val data = postJsr.data
-        return (0u until entries.toUInt())
+    fun readTable(postJsr: State): Sequence<SnesAddress?> {
+        val data = postJsr.memory
+        return (0 until entries)
                 .asSequence()
-                .map { postJsr.address.pc + (it * 3u) }
-                .map { pc -> joinBytes(data[pc], data[pc + 1u], data[pc + 2u]).toUInt24() }
-                .map { SnesAddress(it) }
+                .map { postJsr.address + (it * 3) }
+                .map { address -> joinNullableBytes(data[address], data[address + 1], data[address + 2])?.toUInt24() }
+                .map { pointer -> pointer?.let { SnesAddress(it) } }
     }
 
     override fun toString() = "JslTableRoutine($entries)"

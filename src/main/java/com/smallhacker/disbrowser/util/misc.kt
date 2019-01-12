@@ -30,6 +30,17 @@ fun joinBytes(vararg bytes: UByte) = bytes
         .mapIndexed { index, v -> v.toUInt() shl (index * 8) }
         .reduce { a, b -> a or b }
 
+fun joinNullableBytes(vararg bytes: UByte?): UInt? {
+    if (bytes.any { it == null }) {
+        return null
+    }
+
+    return bytes
+            .asSequence()
+            .mapIndexed { index, v -> v!!.toUInt() shl (index * 8) }
+            .reduce { a, b -> a or b }
+}
+
 inline class UInt24(private val data: UInt) {
     fun toUInt() = data and 0x00FF_FFFFu
     fun toUShort() = toUInt().toUShort()
@@ -43,7 +54,7 @@ inline class UInt24(private val data: UInt) {
     infix fun or(v: UInt24) = (data or v.data).toUInt24()
     infix fun or(v: UInt) = (data or v).toUInt24()
     infix fun shl(v: Int) = (data shl v).toUInt24()
-    infix fun shr(v: Int)= (toUInt() shr v).toUInt24()
+    infix fun shr(v: Int) = (toUInt() shr v).toUInt24()
 
     operator fun plus(v: UInt24) = (toUInt() + v.toUInt()).toUInt24()
     operator fun plus(v: UInt) = (toUInt() + v).toUInt24()
@@ -61,3 +72,6 @@ fun UByte.toUInt24() = this.toUInt().toUInt24()
 fun Int.toUInt24() = this.toUInt().toUInt24()
 fun Short.toUInt24() = this.toUInt().toUInt24()
 fun Byte.toUInt24() = this.toUInt().toUInt24()
+
+fun <T> List<T>.asReverseSequence(): Sequence<T> =
+        ((size - 1) downTo 0).asSequence().map { this[it] }

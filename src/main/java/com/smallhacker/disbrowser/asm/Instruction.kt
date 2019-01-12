@@ -12,7 +12,7 @@ interface CodeUnit {
     val preState: State?
     val postState: State?
 
-    val bytes: RomData
+    val bytes: ValidMemorySpace
     val opcode: Opcode
     val lengthSuffix: String?
 
@@ -62,7 +62,7 @@ interface CodeUnit {
 
 class DataBlock(
         override val opcode: Opcode,
-        override val bytes: RomData,
+        override val bytes: ValidMemorySpace,
         override val presentedAddress: SnesAddress,
         override val relativeAddress: SnesAddress,
         override val linkedState: State?
@@ -77,7 +77,7 @@ class DataBlock(
     override val lengthSuffix: String? = null
 }
 
-class Instruction(override val bytes: RomData, override val opcode: Opcode, override val preState: State) : CodeUnit {
+class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opcode, override val preState: State) : CodeUnit {
     override val address: SnesAddress get() = preState.address
     override val relativeAddress get() = address
     override val presentedAddress get() = address
@@ -115,14 +115,55 @@ class Instruction(override val bytes: RomData, override val opcode: Opcode, over
             return null
         }
 
+        return referencedAddress()
+
+//        return when (opcode.mode) {
+//            Mode.ABSOLUTE_CODE -> preState.resolveAbsoluteCode(word)
+//            Mode.ABSOLUTE_LONG -> SnesAddress(long)
+//            Mode.RELATIVE -> relativeAddress + 2 + signedByte.toInt()
+//            Mode.RELATIVE_LONG -> relativeAddress + 3 + signedWord.toInt()
+//            Mode.CODE_WORD -> preState.resolveAbsoluteCode(word)
+//            Mode.CODE_LONG -> SnesAddress(long)
+//            Mode.DATA_WORD -> preState.resolveAbsoluteData(word)
+//            Mode.DATA_LONG -> SnesAddress(long)
+//            else -> null
+//        }
+    }
+
+    private fun referencedAddress(): SnesAddress? {
         return when (opcode.mode) {
-            Mode.ABSOLUTE -> relativeAddress.withinBank(word)
+            Mode.ABSOLUTE -> preState.resolveAbsoluteData(word)
+            Mode.ABSOLUTE_CODE -> preState.resolveAbsoluteCode(word)
+            Mode.ABSOLUTE_INDIRECT -> preState.resolveAbsoluteData(word)
+            Mode.ABSOLUTE_INDIRECT_LONG -> preState.resolveAbsoluteData(word)
             Mode.ABSOLUTE_LONG -> SnesAddress(long)
+            Mode.ABSOLUTE_LONG_X -> SnesAddress(long)
+            Mode.ABSOLUTE_X -> preState.resolveAbsoluteData(word)
+            Mode.ABSOLUTE_X_INDIRECT -> preState.resolveAbsoluteData(word)
+            Mode.ABSOLUTE_Y -> preState.resolveAbsoluteData(word)
+            Mode.BLOCK_MOVE -> null
+            Mode.CODE_WORD -> preState.resolveAbsoluteCode(word)
+            Mode.CODE_LONG -> SnesAddress(long)
+            Mode.DATA_BYTE -> null
+            Mode.DATA_WORD -> preState.resolveAbsoluteData(word)
+            Mode.DATA_LONG -> SnesAddress(long)
+            Mode.DIRECT -> preState.resolveDirectPage(byte)
+            Mode.DIRECT_X -> preState.resolveDirectPage(byte)
+            Mode.DIRECT_Y -> preState.resolveDirectPage(byte)
+            Mode.DIRECT_S -> null
+            Mode.DIRECT_INDIRECT -> preState.resolveDirectPage(byte)
+            Mode.DIRECT_INDIRECT_Y -> preState.resolveDirectPage(byte)
+            Mode.DIRECT_X_INDIRECT -> preState.resolveDirectPage(byte)
+            Mode.DIRECT_S_INDIRECT_Y -> null
+            Mode.DIRECT_INDIRECT_LONG -> preState.resolveDirectPage(byte)
+            Mode.DIRECT_INDIRECT_LONG_Y -> preState.resolveDirectPage(byte)
+            Mode.IMMEDIATE_8 -> null
+            Mode.IMMEDIATE_16 -> null
+            Mode.IMMEDIATE_M -> null
+            Mode.IMMEDIATE_X -> null
+            Mode.IMPLIED -> null
             Mode.RELATIVE -> relativeAddress + 2 + signedByte.toInt()
             Mode.RELATIVE_LONG -> relativeAddress + 3 + signedWord.toInt()
-            Mode.DATA_WORD -> relativeAddress.withinBank(word)
-            Mode.DATA_LONG -> SnesAddress(long)
-            else -> null
         }
     }
 
