@@ -1,5 +1,11 @@
 {
   "code" : {
+    "002111" : {
+      "label" : "layer3X"
+    },
+    "002112" : {
+      "label" : "layer3Y"
+    },
     "002140" : {
       "label" : "apuIo0"
     },

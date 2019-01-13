@@ -25,7 +25,7 @@ class DisassemblyResource {
                     td {
                         a {
                             text(it.label)
-                        }.attr("href", "/${it.codeLocation.toSimpleString()}/mx")
+                        }.attr("href", "/${it.codeLocation.toSimpleString()}/MX")
                     }
                     td { text("(" + it.codeLocation.toFormattedString() + ")") }
                 }
