@@ -3,11 +3,11 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.smallhacker.dis-browser</groupId>
-    <artifactId>dis-browser</artifactId>
+    <groupId>com.smallhacker.disbrowser</groupId>
+    <artifactId>disbrowser</artifactId>
     <packaging>war</packaging>
     <version>1.0-SNAPSHOT</version>
-    <name>dis-browser</name>
+    <name>disbrowser</name>
 
     <dependencyManagement>
         <dependencies>
@@ -90,7 +90,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>com.smallhacker.dis-browser.Main</mainClass>
+                    <mainClass>com.smallhacker.disbrowser.Main</mainClass>
                 </configuration>
             </plugin>
             <plugin>

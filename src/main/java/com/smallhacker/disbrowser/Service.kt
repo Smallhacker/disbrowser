@@ -27,7 +27,7 @@ private val VECTORS = listOf(
 object Service {
     private const val romName = "Zelda no Densetsu - Kamigami no Triforce (Japan)"
     private val romDir = Paths.get("""P:\Emulation\ROMs\SNES""")
-    private val metaDir = Paths.get("""P:\Programming\dis-browser""")
+    private val metaDir = Paths.get("""P:\Programming\disbrowser""")
     private val metaFile = jsonFile<Metadata>(metaDir.resolve("$romName.json"), true)
     private val metadata by lazy { metaFile.load() }
 
