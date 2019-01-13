@@ -108,3 +108,23 @@ tr.line-active {
 .opcode-info{
     text-decoration: green underline dotted;
 }
+
+.field-editable-popup-icon {
+    cursor: pointer;
+    text-align: center;
+    padding: 0 5px;
+    opacity: 0;
+}
+
+
+.field-editable-popup-icon:hover,
+.field-editable-popup:hover > .field-editable-popup-icon {
+    opacity: 1;
+}
+
+.field-editable-popup-icon:hover {
+    font-weight: bold;
+}
+.field-editable-popup-icon::before {
+    content: "[e]"
+}

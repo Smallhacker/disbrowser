@@ -16,18 +16,9 @@ interface CodeUnit {
     val opcode: Opcode
     val lengthSuffix: String?
 
+    val memory: SnesMapper
+
     fun operandByte(index: UInt): UByte = bytes[opcode.operandIndex + index]
-    fun printOpcodeAndSuffix(): String {
-        val mnemonic = opcode.mnemonic.displayName
-        val suffix = lengthSuffix ?: ""
-        return "$mnemonic$suffix"
-    }
-    fun printAlternativeOpcodeAndSuffix(): String? {
-        val mnemonic = opcode.mnemonic.alternativeName ?: return null
-        val suffix = lengthSuffix ?: ""
-        return "$mnemonic$suffix"
-    }
-    fun printOperands() = opcode.mode.print(this)
 
     fun bytesToString(): String {
         return bytes.asSequence()
@@ -65,7 +56,8 @@ class DataBlock(
         override val bytes: ValidMemorySpace,
         override val presentedAddress: SnesAddress,
         override val relativeAddress: SnesAddress,
-        override val linkedState: State?
+        override val linkedState: State?,
+        override val memory: SnesMapper
 ) : CodeUnit {
     override val nextPresentedAddress: SnesAddress
         get() = presentedAddress + operandLength.toInt()
@@ -78,6 +70,7 @@ class DataBlock(
 }
 
 class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opcode, override val preState: State) : CodeUnit {
+    override val memory = preState.memory
     override val address: SnesAddress get() = preState.address
     override val relativeAddress get() = address
     override val presentedAddress get() = address
@@ -92,9 +85,11 @@ class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opc
                 .withOrigin(this)
     }
 
+    private val showLengthSuffix get() = opcode.mode.showLengthSuffix and opcode.mnemonic.showLengthSuffix
+
     override val lengthSuffix: String?
         get() {
-            if (!opcode.mode.showLengthSuffix) {
+            if (!showLengthSuffix) {
                 return null
             }
 
@@ -116,58 +111,55 @@ class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opc
         }
 
         return referencedAddress()
-
-//        return when (opcode.mode) {
-//            Mode.ABSOLUTE_CODE -> preState.resolveAbsoluteCode(word)
-//            Mode.ABSOLUTE_LONG -> SnesAddress(long)
-//            Mode.RELATIVE -> relativeAddress + 2 + signedByte.toInt()
-//            Mode.RELATIVE_LONG -> relativeAddress + 3 + signedWord.toInt()
-//            Mode.CODE_WORD -> preState.resolveAbsoluteCode(word)
-//            Mode.CODE_LONG -> SnesAddress(long)
-//            Mode.DATA_WORD -> preState.resolveAbsoluteData(word)
-//            Mode.DATA_LONG -> SnesAddress(long)
-//            else -> null
-//        }
     }
 
-    private fun referencedAddress(): SnesAddress? {
-        return when (opcode.mode) {
-            Mode.ABSOLUTE -> preState.resolveAbsoluteData(word)
-            Mode.ABSOLUTE_CODE -> preState.resolveAbsoluteCode(word)
-            Mode.ABSOLUTE_INDIRECT -> preState.resolveAbsoluteData(word)
-            Mode.ABSOLUTE_INDIRECT_LONG -> preState.resolveAbsoluteData(word)
-            Mode.ABSOLUTE_LONG -> SnesAddress(long)
-            Mode.ABSOLUTE_LONG_X -> SnesAddress(long)
-            Mode.ABSOLUTE_X -> preState.resolveAbsoluteData(word)
-            Mode.ABSOLUTE_X_INDIRECT -> preState.resolveAbsoluteData(word)
-            Mode.ABSOLUTE_Y -> preState.resolveAbsoluteData(word)
-            Mode.BLOCK_MOVE -> null
-            Mode.CODE_WORD -> preState.resolveAbsoluteCode(word)
-            Mode.CODE_LONG -> SnesAddress(long)
-            Mode.DATA_BYTE -> null
-            Mode.DATA_WORD -> preState.resolveAbsoluteData(word)
-            Mode.DATA_LONG -> SnesAddress(long)
-            Mode.DIRECT -> preState.resolveDirectPage(byte)
-            Mode.DIRECT_X -> preState.resolveDirectPage(byte)
-            Mode.DIRECT_Y -> preState.resolveDirectPage(byte)
-            Mode.DIRECT_S -> null
-            Mode.DIRECT_INDIRECT -> preState.resolveDirectPage(byte)
-            Mode.DIRECT_INDIRECT_Y -> preState.resolveDirectPage(byte)
-            Mode.DIRECT_X_INDIRECT -> preState.resolveDirectPage(byte)
-            Mode.DIRECT_S_INDIRECT_Y -> null
-            Mode.DIRECT_INDIRECT_LONG -> preState.resolveDirectPage(byte)
-            Mode.DIRECT_INDIRECT_LONG_Y -> preState.resolveDirectPage(byte)
-            Mode.IMMEDIATE_8 -> null
-            Mode.IMMEDIATE_16 -> null
-            Mode.IMMEDIATE_M -> null
-            Mode.IMMEDIATE_X -> null
-            Mode.IMPLIED -> null
-            Mode.RELATIVE -> relativeAddress + 2 + signedByte.toInt()
-            Mode.RELATIVE_LONG -> relativeAddress + 3 + signedWord.toInt()
-        }
-    }
+    private fun referencedAddress() = opcode.mode.referencedAddress(this)
 
     override fun toString(): String {
-        return "$address ${bytesToString()} ${opcode.mnemonic.displayName} ${opcode.mode.print(this).padEnd(100, ' ')} ($preState -> $postState)"
+        val (address, bytes, _, primaryMnemonic, _, suffix, operands, _, _) = print()
+        return "${address ?: "\$xx:xxxx"} $bytes $primaryMnemonic${suffix ?: ""} ${operands?.padEnd(100, ' ')
+                ?: ""} ($preState -> $postState)"
     }
 }
+
+fun CodeUnit.print(metadata: Metadata? = null): PrintedCodeUnit {
+    val mnemonic = opcode.mnemonic
+    val primaryMnemonic = mnemonic.displayName
+    val secondaryMnemonic = mnemonic.alternativeName
+
+    var suffix = lengthSuffix
+    var operands = metadata?.let { opcode.mode.printWithLabel(this, it) }
+    if (operands == null) {
+        operands = opcode.mode.printRaw(this)
+        suffix = null
+    }
+
+    val state = postState?.toString()
+    val label = address?.let { metadata?.get(it)?.label }
+    val comment = address?.let { metadata?.get(it)?.comment }
+    val formattedAddress = address?.toFormattedString()
+    val bytes = bytesToString()
+
+    val labelAddress = if (opcode.mode.canHaveLabel) {
+        opcode.mode.referencedAddress(this)?.let {
+            memory.toCanonical(it)
+        }
+    } else {
+        null
+    }
+
+    return PrintedCodeUnit(formattedAddress, bytes, label, primaryMnemonic, secondaryMnemonic, suffix, operands, state, comment, labelAddress)
+}
+
+data class PrintedCodeUnit(
+        val address: String?,
+        val bytes: String,
+        val label: String?,
+        val primaryMnemonic: String,
+        val secondaryMnemonic: String?,
+        val suffix: String?,
+        val operands: String?,
+        val state: String?,
+        val comment: String?,
+        val labelAddress: SnesAddress?
+)

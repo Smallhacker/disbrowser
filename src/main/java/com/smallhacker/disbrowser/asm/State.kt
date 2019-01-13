@@ -4,7 +4,7 @@ import com.smallhacker.disbrowser.ImmStack
 import com.smallhacker.disbrowser.immStack
 import com.smallhacker.disbrowser.util.toUInt24
 
-data class State(val origin: Instruction? = null, val memory: SnesMapper, val address: SnesAddress, val flags: VagueNumber = VagueNumber(), val stack: ImmStack<VagueNumber> = immStack()) {
+data class State(val origin: Instruction? = null, val memory: SnesMapper, val address: SnesAddress, val flags: VagueNumber = VagueNumber(), val stack: ImmStack<VagueNumber> = immStack(), val metadata: Metadata) {
     val m: Boolean? get() = flags.getBoolean(0x20u)
     val x: Boolean? get() = flags.getBoolean(0x10u)
     val db: UByte? get() = pb // TODO
@@ -58,17 +58,18 @@ data class State(val origin: Instruction? = null, val memory: SnesMapper, val ad
 
     fun resolveDirectPage(directPage: UByte) = dp?.let { dp ->
         val ptr = (dp.toUInt24() shl 8) or (directPage.toUInt24())
-        SnesAddress(ptr)
+        memory.toCanonical(SnesAddress(ptr))
     }
 
     fun resolveAbsoluteData(absolute: UShort) = db?.let { db ->
         val ptr = (db.toUInt24() shl 16) or (absolute.toUInt24())
-        SnesAddress(ptr)
+        memory.toCanonical(SnesAddress(ptr))
     }
 
-    fun resolveAbsoluteCode(absolute: UShort): SnesAddress {
+    fun resolveAbsoluteCode(absolute: UShort): SnesAddress? {
         val ptr = (pb.toUInt24() shl 16) or (absolute.toUInt24())
-        return SnesAddress(ptr)
+        val address = SnesAddress(ptr)
+        return memory.toCanonical(address)
     }
 
     private fun stackToString(): String {

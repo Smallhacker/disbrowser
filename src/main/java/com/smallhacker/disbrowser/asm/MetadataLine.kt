@@ -12,5 +12,5 @@ data class MetadataLine(
         val flags: MutableList<InstructionFlag> = ArrayList()
 ) {
     @JsonIgnore
-    fun isEmpty() = (label == null) && (comment == null) && (preComment == null) && (length == 0) && (flags.isEmpty())
+    fun isEmpty() = (label == null) && (comment == null) && (preComment == null) && (length == null) && (flags.isEmpty())
 }

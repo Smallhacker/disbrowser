@@ -9,6 +9,21 @@ import kotlin.reflect.KMutableProperty1
 
 private val RESET_VECTOR_LOCATION = address(0x00_FFFC)
 
+private val VECTORS = listOf(
+        address(0x00_FFE4) to "COP",
+        address(0x00_FFE6) to "BRK",
+        address(0x00_FFE8) to "ABORT",
+        address(0x00_FFEA) to "NMI",
+        address(0x00_FFEC) to "RESET",
+        address(0x00_FFEE) to "IRQ",
+        address(0x00_FFF4) to "COP (e)",
+        address(0x00_FFF6) to "BRK (e)",
+        address(0x00_FFF8) to "ABORT (e)",
+        address(0x00_FFFA) to "NMI (e)",
+        address(0x00_FFFC) to "RES (e)",
+        address(0x00_FFFE) to "IRQBRK (e)"
+)
+
 object Service {
     private const val romName = "Zelda no Densetsu - Kamigami no Triforce (Japan)"
     private val romDir = Paths.get("""P:\Emulation\ROMs\SNES""")
@@ -30,7 +45,7 @@ object Service {
     }
 
     fun showDisassembly(initialAddress: SnesAddress, flags: VagueNumber): HtmlNode? {
-        val initialState = State(memory = snesMemory, address = initialAddress, flags = flags)
+        val initialState = State(memory = snesMemory, address = initialAddress, flags = flags, metadata = metadata)
         val disassembly = Disassembler.disassemble(initialState, metadata, false)
 
         return print(disassembly, metadata)
@@ -52,17 +67,7 @@ object Service {
                 .sortedBy { it.first distanceTo it.second }
                 .forEach { grid.arrow(it.first, it.second) }
 
-        return html {
-            head {
-                title { text("Disassembly Browser") }
-                link {}.attr("rel", "stylesheet").attr("href", "/resources/style.css")
-                meta {}.attr("charset", "UTF-8")
-            }
-            body {
-                grid.output().appendTo(parent)
-                script().attr("src", "/resources/disbrowser.js")
-            }
-        }
+        return grid.output()
     }
 
     fun updateMetadata(address: SnesAddress, field: KMutableProperty1<MetadataLine, String?>, value: String) {
@@ -79,11 +84,17 @@ object Service {
         val line = metadata.getOrCreate(address)
         field.set(line, value)
 
-        if (line.isEmpty()) {
-            metadata[address] = null
-        }
-
+        metadata.cleanUp()
         metaFile.save(metadata)
     }
 
+    fun getVectors() = VECTORS.asSequence()
+            .map { (vectorLocation: SnesAddress, name: String ) ->
+                val codeLocation = SnesAddress(snesMemory.getWord(vectorLocation)!!.toUInt24())
+                val label = metadata[codeLocation]?.label
+                        ?: codeLocation.toFormattedString()
+                Vector(vectorLocation, codeLocation, name, label)
+            }
 }
+
+data class Vector(val vectorLocation: SnesAddress, val codeLocation: SnesAddress, val name: String, val label: String)

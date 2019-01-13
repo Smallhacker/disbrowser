@@ -1,9 +1,23 @@
 {
   "code" : {
+    "002140" : {
+      "label" : "apuIo0"
+    },
+    "002141" : {
+      "label" : "apuIo1"
+    },
+    "002142" : {
+      "label" : "apuIo2"
+    },
+    "002143" : {
+      "label" : "apuIo3"
+    },
+    "00420c" : {
+      "label" : "hdmaEnable"
+    },
     "008000" : {
       "label" : "ResetVector"
     },
-    "00800a" : { },
     "00801b" : {
       "comment" : "\\ Turn off emulation mode"
     },
@@ -58,9 +72,17 @@
         "entries" : 28
       } ]
     },
+    "0080c9" : {
+      "label" : "NmiVector"
+    },
+    "00822c" : {
+      "label" : "UnusedVector"
+    },
+    "0082d8" : {
+      "label" : "IrqVector"
+    },
     "00841e" : {
-      "label" : "ClearOam",
-      "comment" : "Test3"
+      "label" : "ClearOam"
     },
     "00879c" : {
       "comment" : "Preserve Y value for later",
@@ -137,6 +159,9 @@
     "00890b" : {
       "comment" : "/"
     },
+    "00ffff" : {
+      "label" : "CrashVector"
+    },
     "0287d0" : {
       "flags" : [ {
         "flagType" : "JslTableRoutine",
@@ -151,6 +176,15 @@
         "flagType" : "JslTableRoutine",
         "entries" : 12
       } ]
+    },
+    "7e0010" : {
+      "label" : "gameMode"
+    },
+    "7e0011" : {
+      "label" : "subGameMode"
+    },
+    "7e0012" : {
+      "label" : "nmiExecuted"
     }
   }
 }

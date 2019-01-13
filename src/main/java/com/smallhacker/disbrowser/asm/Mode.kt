@@ -2,144 +2,228 @@ package com.smallhacker.disbrowser.asm
 
 import com.smallhacker.disbrowser.util.*
 
-private val ZEROES = Regex("[0]+")
-private fun countBytes(format: String) = (ZEROES.find(format)?.groupValues?.firstOrNull()?.length?.toUInt() ?: 0u) / 2u
-
-private const val ACCUMULATOR_SIZE = -1
-private const val INDEX_SIZE = -2
-
-fun format(format: String, value: UInt, operandBytes: UInt = countBytes(format)) =
-        format.replace(ZEROES, toHex(value, operandBytes))
-
-enum class Mode {
-    DATA_BYTE("$00", dataMode = true, showLengthSuffix = false),
-    DATA_WORD("$0000", dataMode = true, showLengthSuffix = false),
-    DATA_LONG("$000000", dataMode = true, showLengthSuffix = false),
-    CODE_WORD("$0000", dataMode = true, showLengthSuffix = false),
-    CODE_LONG("$000000", dataMode = true, showLengthSuffix = false),
-
-    IMPLIED("", showLengthSuffix = false),
-    IMMEDIATE_8("#$00", showLengthSuffix = false),
-    IMMEDIATE_16("#$0000", showLengthSuffix = false),
-    ABSOLUTE("$0000"),
-    ABSOLUTE_CODE("$0000"),
-    ABSOLUTE_X("$0000,x"),
-    ABSOLUTE_Y("$0000,y"),
-    ABSOLUTE_LONG("$000000"),
-    ABSOLUTE_LONG_X("$000000,x"),
-    ABSOLUTE_INDIRECT("($0000)"),
-    ABSOLUTE_INDIRECT_LONG("[$0000]"),
-    ABSOLUTE_X_INDIRECT("($0000,x)"),
-    DIRECT("$00"),
-    DIRECT_X("$00,x"),
-    DIRECT_Y("$00,y"),
-    DIRECT_S("$00,s"),
-    DIRECT_INDIRECT("($00)"),
-    DIRECT_INDIRECT_Y("($00),y"),
-    DIRECT_X_INDIRECT("($00,x)"),
-    DIRECT_S_INDIRECT_Y("($00,s),y"),
-    DIRECT_INDIRECT_LONG("[$00]"),
-    DIRECT_INDIRECT_LONG_Y("[$00],y"),
-
-    IMMEDIATE_M(
-            operandLength = ACCUMULATOR_SIZE,
-            print = {
-                when (preState?.m) {
-                    null -> "????"
-                    true -> format("#$00", byte.toUInt())
-                    false -> format("#$0000", word.toUInt())
-                }
-            }
-    ),
-    IMMEDIATE_X(
-            operandLength = INDEX_SIZE,
-            print = {
-                when (preState?.x) {
-                    null -> "???"
-                    true -> format("#$00", byte.toUInt())
-                    false -> format("#$0000", word.toUInt())
-                }
-            }
-    ),
-
-    RELATIVE(
-            format = "$000000",
-            operandLength = 1u,
-            valueGetter = {
-                val rel = signedByte.toInt() + 2
-                (relativeAddress + rel).value.toUInt()
-            },
-            showLengthSuffix = false
-    ),
-    RELATIVE_LONG(
-            format = "$000000",
-            operandLength = 2u,
-            valueGetter = {
-                val rel = signedWord.toInt() + 3
-                (relativeAddress + rel).value.toUInt()
-            },
-            showLengthSuffix = false
-    ),
-    BLOCK_MOVE(
-            operandLength = 2,
-            print = { String.format("#$%02x,#$%02x", byte.toInt(), byte2.toInt()) },
-            showLengthSuffix = false
-    )
-    ;
-
-    private val operandLength: Int
-    val print: CodeUnit.() -> String
-    val dataMode: Boolean
-    val showLengthSuffix: Boolean
-
-    constructor(operandLength: Int, print: CodeUnit.() -> String, showLengthSuffix: Boolean = true) {
-        this.operandLength = operandLength
-        this.print = print
-        this.dataMode = false
-        this.showLengthSuffix = showLengthSuffix
-    }
-
-    constructor(
-            format: String,
-            printedLength: UInt = countBytes(format),
-            operandLength: UInt = printedLength,
-            valueGetter: CodeUnit.() -> UInt = { value!! },
-            dataMode: Boolean = false,
-            showLengthSuffix: Boolean = true
-    ) {
-        this.operandLength = operandLength.toInt()
-        this.print = { format(format, valueGetter(this), printedLength) }
-        this.dataMode = dataMode
-        this.showLengthSuffix = showLengthSuffix
-    }
-
-    /**
-     * Returns the total length, in bytes, of an instruction of this mode and its operands.
-     *
-     * This is usually one greater than [operandLength], except in the cases when the instruction is just pure data
-     * without an opcode (in which case the two are equal).
-     *
-     * If the length cannot be determined based on the current [State], `null` is returned.
-     */
-    fun instructionLength(state: State): UInt? {
-        val operatorLength = if (this.dataMode) 0u else 1u
-        return operandLength(state)
-                ?.plus(operatorLength)
-    }
-
-    /**
-     * Returns the length, in bytes, of the operands of an instruction of this mode.
-     *
-     * This is usually one less than [operandLength], except in the cases when the instruction is just pure data
-     * without an opcode (in which case the two are equal).
-     *
-     * If the length cannot be determined based on the current [State], `null` is returned.
-     */
-    fun operandLength(state: State): UInt? {
-        return when (operandLength) {
-            ACCUMULATOR_SIZE -> state.mWidth
-            INDEX_SIZE -> state.xWidth
-            else -> operandLength.toUInt()
-        }
-    }
+interface Mode {
+    val dataMode get() = false
+    val showLengthSuffix get() = true
+    val canHaveLabel: Boolean
+    fun operandLength(state: State): UInt?
+    fun printWithLabel(ins: CodeUnit, metadata: Metadata): String? = referencedAddress(ins)?.let { metadata[it]?.label }
+    fun printRaw(ins: CodeUnit): String
+    fun referencedAddress(ins: CodeUnit): SnesAddress?
 }
+
+fun Mode.instructionLength(state: State): UInt? {
+    val operatorLength = if (this.dataMode) 0u else 1u
+    return operandLength(state)
+            ?.plus(operatorLength)
+}
+
+val Mode.x: Mode get() = IndexXMode(this)
+val Mode.y: Mode get() = IndexYMode(this)
+val Mode.s: Mode get() = IndexSMode(this)
+val Mode.indirect: Mode get() = IndirectMode(this)
+val Mode.indirectLong: Mode get() = IndirectLongMode(this)
+
+private abstract class RawWrappedMode(
+        private val parent: Mode,
+        private val prefix: String = "",
+        private val suffix: String = ""
+) : Mode by parent {
+    override val canHaveLabel = false
+    override fun printWithLabel(ins: CodeUnit, metadata: Metadata): String? = printRaw(ins)
+    override fun printRaw(ins: CodeUnit) = prefix + parent.printRaw(ins) + suffix
+}
+
+private abstract class WrappedMode(
+        private val parent: Mode,
+        private val prefix: String = "",
+        private val suffix: String = ""
+) : Mode by parent {
+    override fun printWithLabel(ins: CodeUnit, metadata: Metadata): String? = parent.printWithLabel(ins, metadata)?.let { prefix + it + suffix }
+    override fun printRaw(ins: CodeUnit) = prefix + parent.printRaw(ins) + suffix
+}
+
+abstract class MultiMode(private val fallback: Mode, private vararg val options: Mode) : Mode {
+    override val canHaveLabel = get{ canHaveLabel }
+    override val dataMode = get { dataMode }
+    override val showLengthSuffix = get { showLengthSuffix }
+
+    override fun operandLength(state: State) = get(state) { operandLength(state) }
+
+    override fun printWithLabel(ins: CodeUnit, metadata: Metadata): String? = get(ins.preState) { printWithLabel(ins, metadata) }
+
+    override fun printRaw(ins: CodeUnit) = get(ins.preState) { printRaw(ins) }
+
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = get(ins.preState) { referencedAddress(ins) }
+
+    protected abstract fun pickMode(state: State): UInt
+
+    private fun <T> get(state: State?, getter: Mode.() -> T): T {
+        if (state != null) {
+            val mode = pickMode(state)
+            if (mode != 0u) {
+                return getter(options[mode.toInt() - 1])
+            }
+        }
+
+        return getter(fallback)
+    }
+
+    private fun <T : Any> get(getter: Mode.() -> T) = get(null, getter)
+}
+
+private interface DataValueType {
+    fun resolve(byte: UByte, state: State?, memory: SnesMapper): SnesAddress?
+    fun resolve(word: UShort, state: State?, memory: SnesMapper): SnesAddress?
+    fun resolve(long: UInt24, state: State?, memory: SnesMapper): SnesAddress?
+    val canHaveLabel: Boolean
+
+    val byte: Mode get() = DataByteMode(this)
+    val word: Mode get() = DataWordMode(this)
+    val long: Mode get() = DataLongMode(this)
+}
+
+object DirectData : DataValueType {
+    override val canHaveLabel = false
+    override fun resolve(byte: UByte, state: State?, memory: SnesMapper): SnesAddress? = null
+    override fun resolve(word: UShort, state: State?, memory: SnesMapper): SnesAddress? = null
+    override fun resolve(long: UInt24, state: State?, memory: SnesMapper): SnesAddress? = null
+}
+
+object DataPointer : DataValueType {
+    override val canHaveLabel = true
+    override fun resolve(byte: UByte, state: State?, memory: SnesMapper) = state?.resolveDirectPage(byte)
+    override fun resolve(word: UShort, state: State?, memory: SnesMapper) = state?.resolveAbsoluteData(word)
+    override fun resolve(long: UInt24, state: State?, memory: SnesMapper) = memory.toCanonical(SnesAddress(long))
+}
+
+object CodePointer : DataValueType {
+    override val canHaveLabel = true
+    override fun resolve(byte: UByte, state: State?, memory: SnesMapper) = state?.resolveDirectPage(byte)
+    override fun resolve(word: UShort, state: State?, memory: SnesMapper) = state?.resolveAbsoluteCode(word)
+    override fun resolve(long: UInt24, state: State?, memory: SnesMapper) = memory.toCanonical(SnesAddress(long))
+}
+
+private abstract class DataValueMode(private val length: UInt, protected val type: DataValueType) : Mode {
+    override val canHaveLabel = type.canHaveLabel
+    override val dataMode = true
+    override val showLengthSuffix = false
+    override fun operandLength(state: State) = length
+}
+
+private class DataByteMode(type: DataValueType) : DataValueMode(1u, type) {
+    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.byte)
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = type.resolve(ins.byte, ins.preState, ins.memory)
+}
+
+private class DataWordMode(type: DataValueType) : DataValueMode(2u, type) {
+    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.word)
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = type.resolve(ins.word, ins.preState, ins.memory)
+}
+
+private class DataLongMode(type: DataValueType) : DataValueMode(3u, type) {
+    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.long)
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = type.resolve(ins.long, ins.preState, ins.memory)
+}
+
+object Implied : Mode {
+    override val canHaveLabel = false
+    override val showLengthSuffix = false
+    override fun operandLength(state: State) = 0u
+    override fun printRaw(ins: CodeUnit) = ""
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = null
+}
+
+object Immediate8 : Mode {
+    override val canHaveLabel = false
+    override val showLengthSuffix = false
+    override fun operandLength(state: State) = 1u
+    override fun printRaw(ins: CodeUnit) = "#$" + toHex(ins.byte)
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = null
+}
+
+object Immediate16 : Mode {
+    override val canHaveLabel = false
+    override val showLengthSuffix = false
+    override fun operandLength(state: State) = 2u
+    override fun printRaw(ins: CodeUnit) = "#$" + toHex(ins.word)
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = null
+}
+
+object Direct : Mode {
+    override val canHaveLabel = true
+    override fun operandLength(state: State) = 1u
+    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.byte)
+    override fun referencedAddress(ins: CodeUnit) = ins.preState?.resolveDirectPage(ins.byte)
+}
+
+object Absolute : Mode {
+    override val canHaveLabel = true
+    override fun operandLength(state: State) = 2u
+    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.word)
+    override fun referencedAddress(ins: CodeUnit) = ins.preState?.resolveAbsoluteData(ins.word)
+}
+
+object AbsoluteCode : Mode {
+    override val canHaveLabel = true
+    override fun operandLength(state: State) = 2u
+    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.word)
+    override fun referencedAddress(ins: CodeUnit) = ins.preState?.resolveAbsoluteCode(ins.word)
+}
+
+object AbsoluteLong : Mode {
+    override val canHaveLabel = true
+    override fun operandLength(state: State) = 3u
+    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.long)
+    override fun referencedAddress(ins: CodeUnit) = ins.memory.toCanonical(SnesAddress(ins.long))
+}
+
+private object ImmediateUnknownMode : Mode {
+    override val canHaveLabel = false
+    override fun operandLength(state: State): UInt? = null
+    override fun printRaw(ins: CodeUnit) = "???"
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = null
+}
+
+object ImmediateM : MultiMode(ImmediateUnknownMode, Immediate8, Immediate16) {
+    override fun pickMode(state: State) = state.mWidth ?: 0u
+}
+
+object ImmediateX : MultiMode(ImmediateUnknownMode, Immediate8, Immediate16) {
+    override fun pickMode(state: State) = state.xWidth ?: 0u
+}
+
+abstract class BaseRelativeMode(private val length: UInt) : Mode {
+    override val showLengthSuffix = false
+    override fun operandLength(state: State) = length
+    override fun printRaw(ins: CodeUnit) = "$" + referencedAddress(ins).toSimpleString()
+    override fun referencedAddress(ins: CodeUnit) = ins.memory.toCanonical(ins.relativeAddress + (relativeOffset(ins) + 1 + length.toInt()))
+    protected abstract fun relativeOffset(ins: CodeUnit): Int
+}
+
+object Relative : BaseRelativeMode(1u) {
+    override val canHaveLabel = true
+    override fun relativeOffset(ins: CodeUnit) = ins.signedByte.toInt()
+}
+
+object RelativeLong : BaseRelativeMode(2u) {
+    override val canHaveLabel = true
+    override fun relativeOffset(ins: CodeUnit) = ins.signedWord.toInt()
+}
+
+object BlockMove : Mode {
+    override val canHaveLabel = false
+    override val showLengthSuffix = false
+
+    override fun operandLength(state: State) = 2u
+
+    override fun printRaw(ins: CodeUnit) = String.format("#$%02x,#$%02x", ins.byte.toInt(), ins.byte2.toInt())
+
+    override fun referencedAddress(ins: CodeUnit): SnesAddress? = null
+}
+
+private class IndexXMode(parent: Mode) : WrappedMode(parent, suffix = ",x")
+private class IndexYMode(parent: Mode) : WrappedMode(parent, suffix = ",y")
+private class IndexSMode(parent: Mode) : RawWrappedMode(parent, suffix = ",s")
+private class IndirectMode(parent: Mode) : WrappedMode(parent, "(", ")")
+private class IndirectLongMode(parent: Mode) : WrappedMode(parent, "[", "]")

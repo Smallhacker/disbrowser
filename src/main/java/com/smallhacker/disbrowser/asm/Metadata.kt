@@ -6,12 +6,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.smallhacker.disbrowser.util.joinNullableBytes
+import com.smallhacker.disbrowser.util.removeIf
 import com.smallhacker.disbrowser.util.toUInt24
 import java.util.*
 
 class Metadata {
     @JsonProperty
-    private val code: TreeMap<SnesAddress, MetadataLine>
+    private val code: MutableMap<SnesAddress, MetadataLine>
 
     constructor() {
         this.code = TreeMap()
@@ -45,6 +46,10 @@ class Metadata {
         val newLine = MetadataLine()
         this[address] = newLine
         return newLine
+    }
+
+    fun cleanUp() {
+        code.removeIf { _, v -> v.isEmpty() }
     }
 }
 
@@ -88,13 +93,14 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
                     val target = table.getLong(offset)
 
                     DataBlock(
-                            Opcode.POINTER_LONG,
+                            Opcode.CODE_POINTER_LONG,
                             table.range(offset, 3u),
                             jumpInstruction.postState.address + offset.toInt(),
                             jumpInstruction.relativeAddress,
                             jumpInstruction.opcode.mutate(jumpInstruction)
                                     .mutateAddress { SnesAddress(target) }
-                                    .withOrigin(jumpInstruction)
+                                    .withOrigin(jumpInstruction),
+                            jumpInstruction.memory
                     )
                 }
     }

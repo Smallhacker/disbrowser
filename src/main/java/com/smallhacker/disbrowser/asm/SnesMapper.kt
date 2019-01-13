@@ -19,8 +19,8 @@ abstract class SnesMapper: MemorySpace {
         return entry.space[offset]
     }
 
-    fun toCanonical(address: SnesAddress): SnesAddress? {
-        val entry = areas[address.value.toUInt()] ?: return null
+    fun toCanonical(address: SnesAddress): SnesAddress {
+        val entry = areas[address.value.toUInt()] ?: return address
         val offset = address.value - entry.start
         return entry.canonicalStart + offset.toInt()
     }

@@ -67,16 +67,40 @@ window.addEventListener("hashchange", function () {
     highlight(fromHash())
 }, false);
 
-let comments = document.getElementsByClassName("field-editable");
-for (let i = 0; i < comments.length; i++) {
-    let comment = comments[i];
-    comment.addEventListener("change", e => {
+let editables = document.getElementsByClassName("field-editable");
+for (let i = 0; i < editables.length; i++) {
+    let editable = editables[i];
+    editable.addEventListener("change", e => {
         let target = <HTMLInputElement>(e.target);
         let field = target.dataset.field || "";
         let address = target.dataset.address;
         let value = (target).value;
 
         xhr(`/rest/${address}/${field}`, "POST", value)
+            .catch((xhr: XMLHttpRequest) => alert("Error: HTTP " + xhr.status));
+
+        return false;
+    });
+}
+
+let popupEditables = document.getElementsByClassName("field-editable-popup");
+for (let i = 0; i < popupEditables.length; i++) {
+    let editable = <HTMLSpanElement>(popupEditables[i]);
+    let first = editable.getElementsByClassName("field-editable-popup-icon")[0];
+    if (!first) {
+        continue;
+    }
+    first.addEventListener("click", e => {
+        let field = editable.dataset.field || "";
+        let address = editable.dataset.address;
+        let value = editable.dataset.value;
+        let newValue = prompt("Label for $" + address, value);
+        if (newValue === null || newValue == value) {
+            return false;
+        }
+
+        xhr(`/rest/${address}/${field}`, "POST", newValue)
+            .then(() => location.reload())
             .catch((xhr: XMLHttpRequest) => alert("Error: HTTP " + xhr.status));
 
         return false;

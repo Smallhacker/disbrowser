@@ -25,6 +25,10 @@ fun toHex(value: UInt, bytes: UInt): String {
     return String.format(pattern, value.toInt())
 }
 
+fun toHex(value: UInt24) = toHex(value.toUInt(), 3u)
+fun toHex(value: UShort) = toHex(value.toUInt(), 2u)
+fun toHex(value: UByte) = toHex(value.toUInt(), 1u)
+
 fun joinBytes(vararg bytes: UByte) = bytes
         .asSequence()
         .mapIndexed { index, v -> v.toUInt() shl (index * 8) }
@@ -75,3 +79,11 @@ fun Byte.toUInt24() = this.toUInt().toUInt24()
 
 fun <T> List<T>.asReverseSequence(): Sequence<T> =
         ((size - 1) downTo 0).asSequence().map { this[it] }
+
+fun <K, V> MutableMap<K, V>.removeIf(condition: (K, V) -> Boolean) {
+    this.asSequence()
+            .filter { condition(it.key, it.value) }
+            .map { it.key }
+            .toList()
+            .forEach { remove(it) }
+}

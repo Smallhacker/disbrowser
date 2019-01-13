@@ -1,7 +1,6 @@
 package com.smallhacker.disbrowser.resource
 
-import com.smallhacker.disbrowser.HtmlNode
-import com.smallhacker.disbrowser.Service
+import com.smallhacker.disbrowser.*
 import com.smallhacker.disbrowser.asm.SnesAddress
 import com.smallhacker.disbrowser.asm.VagueNumber
 import java.nio.charset.StandardCharsets
@@ -17,7 +16,21 @@ class DisassemblyResource {
     @GET
     @Produces(MediaType.TEXT_HTML)
     fun getIt() = handle {
-        Service.showDisassemblyFromReset()
+        //Service.showDisassemblyFromReset()
+        table {
+            Service.getVectors().forEach {
+                tr {
+                    td { text(it.name) }
+                    td { text("(" + it.vectorLocation.toFormattedString() + ")") }
+                    td {
+                        a {
+                            text(it.label)
+                        }.attr("href", "/${it.codeLocation.toSimpleString()}/mx")
+                    }
+                    td { text("(" + it.codeLocation.toFormattedString() + ")") }
+                }
+            }
+        }.addClass("vector-table")
     }
 
     @GET
@@ -39,14 +52,24 @@ class DisassemblyResource {
 
     private fun handle(runner: () -> HtmlNode?): Response {
         try {
-            val disassembly = runner()
+            val output = runner()
+                    ?: return Response.status(404).build()
 
-            return if (disassembly == null)
-                Response.status(404).build()
-            else
-                Response.ok(disassembly.toString().toByteArray(StandardCharsets.UTF_8))
-                        .encoding("UTF-8")
-                        .build()
+            val html = html {
+                head {
+                    title { text("Disassembly Browser") }
+                    link {}.attr("rel", "stylesheet").attr("href", "/resources/style.css")
+                    meta {}.attr("charset", "UTF-8")
+                }
+                body {
+                    output.appendTo(parent)
+                    script().attr("src", "/resources/disbrowser.js")
+                }
+            }
+
+            return Response.ok(html.toString().toByteArray(StandardCharsets.UTF_8))
+                    .encoding("UTF-8")
+                    .build()
         } catch (e: Exception) {
             e.printStackTrace()
             throw e

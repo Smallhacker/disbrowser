@@ -60,9 +60,6 @@ class Grid {
     }
 
     fun add(ins: CodeUnit, metadata: Metadata, disassembly: Disassembly) {
-        val insMetadata = ins.address?.let { metadata[it] }
-
-        val actualAddress = ins.address
         val presentedAddress = ins.presentedAddress
 
         if (nextAddress != null) {
@@ -75,18 +72,31 @@ class Grid {
         val y = (height++)
         addresses[presentedAddress] = y
 
-        add(y, ins.address,
-                text(actualAddress?.toFormattedString() ?: ""),
-                text(ins.bytesToString()),
-                editableField(presentedAddress, "label", insMetadata?.label),
-                fragment {
-                    opcodeNode(ins)
-                    text(" ")
-                    var operands = ins.printOperands()
+        val (address, bytes, label, primaryMnemonic, secondaryMnemonic, suffix, operands, state, comment, labelAddress)
+                = ins.print(metadata)
 
+        add(y, ins.address,
+                text(address ?: ""),
+                text(bytes),
+                editableField(presentedAddress, "label", label),
+                fragment {
+                    if (secondaryMnemonic == null) {
+                        text(primaryMnemonic)
+                    } else {
+                        span {
+                            text(primaryMnemonic)
+                        }.attr("title", secondaryMnemonic).addClass("opcode-info")
+                    }
+                    text(suffix ?: "")
+                    text(" ")
                     val link = ins.linkedState
                     if (link == null) {
-                        text(operands)
+                        if (labelAddress == null) {
+                            text(operands ?: "")
+                        } else {
+                            val currentLabel = metadata[labelAddress]?.label
+                            editablePopupField(labelAddress, "label", operands, currentLabel)
+                        }
                     } else {
                         val local = link.address in disassembly
 
@@ -95,15 +105,15 @@ class Grid {
                             else -> "/${link.address.toSimpleString()}/${link.urlString}"
                         }
 
-                        operands = metadata[link.address]?.label ?: operands
+                        //operands = metadata[link.address]?.label ?: operands
 
                         a {
-                            text(operands)
+                            text(operands ?: "")
                         }.attr("href", url)
                     }
                 },
-                text(ins.postState?.toString() ?: ""),
-                editableField(presentedAddress, "comment", insMetadata?.comment)
+                text(state ?: ""),
+                editableField(presentedAddress, "comment", comment)
         )
 
         if (ins.opcode.continuation == Continuation.NO) {
@@ -111,23 +121,23 @@ class Grid {
         }
     }
 
-    private fun HtmlArea.opcodeNode(ins: CodeUnit) {
-        val alt = ins.printAlternativeOpcodeAndSuffix()
-        if (alt == null) {
-            text(ins.printOpcodeAndSuffix())
-        } else {
-            span {
-                text(ins.printOpcodeAndSuffix())
-            }.attr("title", alt).addClass("opcode-info")
-        }
-
-    }
-
     private fun editableField(address: SnesAddress, type: String, value: String?): HtmlNode {
         return input(value = value ?: "")
                 .addClass("field-$type")
                 .addClass("field-editable")
                 .attr("data-field", type)
+                .attr("data-address", address.toSimpleString())
+    }
+
+    private fun HtmlArea.editablePopupField(address: SnesAddress, type: String, displayValue: String?, editValue: String?) {
+        span {
+            text(displayValue ?: "")
+            span {}.addClass("field-editable-popup-icon")
+        }
+                .addClass("field-$type")
+                .addClass("field-editable-popup")
+                .attr("data-field", type)
+                .attr("data-value", editValue ?: "")
                 .attr("data-address", address.toSimpleString())
     }
 
