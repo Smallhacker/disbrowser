@@ -5,10 +5,10 @@ import javax.ws.rs.Path
 import javax.ws.rs.PathParam
 import javax.ws.rs.core.Response
 
-@Path("/")
+@Path("/resources")
 class StaticResource {
     @GET
-    @Path("resources/{file}.{ext}")
+    @Path("{file}.{ext}")
     fun getStatic(@PathParam("file") file: String, @PathParam("ext") ext: String): Response {
         val mime = when (ext) {
             "js" -> "application/javascript"

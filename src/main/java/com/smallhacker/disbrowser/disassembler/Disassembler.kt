@@ -1,11 +1,15 @@
 package com.smallhacker.disbrowser.disassembler
 
 import com.smallhacker.disbrowser.asm.*
+import com.smallhacker.disbrowser.game.GameData
+import com.smallhacker.disbrowser.game.JmpIndirectLongInterleavedTable
+import com.smallhacker.disbrowser.game.JslTableRoutine
+import com.smallhacker.disbrowser.game.NonReturningRoutine
 import java.util.*
 import kotlin.collections.ArrayList
 
 object Disassembler {
-    fun disassemble(initialState: State, metadata: Metadata, global: Boolean): Disassembly {
+    fun disassemble(initialState: State, gameData: GameData, global: Boolean): Disassembly {
         val seen = HashSet<SnesAddress>()
         val queue = ArrayDeque<State>()
 
@@ -26,7 +30,7 @@ object Disassembler {
             var stop = (ins.opcode.continuation == Continuation.NO) or
                     (ins.opcode.mode.instructionLength(state) == null)
 
-            metadata[ins.address]?.flags?.forEach { flag ->
+            gameData[ins.address]?.flags?.forEach { flag ->
                 if (flag is JmpIndirectLongInterleavedTable) {
                     if (global) {
                         flag.readTable(state.memory)
@@ -53,7 +57,7 @@ object Disassembler {
             val linkedState = ins.linkedState
 
             if (linkedState != null) {
-                metadata[linkedState.address]?.flags?.forEach {
+                gameData[linkedState.address]?.flags?.forEach {
                     if (it === NonReturningRoutine) {
                         stop = true
                         println(ins.address.toFormattedString())

@@ -1,5 +1,6 @@
 package com.smallhacker.disbrowser.asm
 
+import com.smallhacker.disbrowser.game.GameData
 import com.smallhacker.disbrowser.util.*
 
 interface CodeUnit {
@@ -16,7 +17,7 @@ interface CodeUnit {
     val opcode: Opcode
     val lengthSuffix: String?
 
-    val memory: SnesMapper
+    val memory: SnesMemory
 
     fun operandByte(index: UInt): UByte = bytes[opcode.operandIndex + index]
 
@@ -57,7 +58,7 @@ class DataBlock(
         override val presentedAddress: SnesAddress,
         override val relativeAddress: SnesAddress,
         override val linkedState: State?,
-        override val memory: SnesMapper
+        override val memory: SnesMemory
 ) : CodeUnit {
     override val nextPresentedAddress: SnesAddress
         get() = presentedAddress + operandLength.toInt()
@@ -122,21 +123,21 @@ class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opc
     }
 }
 
-fun CodeUnit.print(metadata: Metadata? = null): PrintedCodeUnit {
+fun CodeUnit.print(gameData: GameData? = null): PrintedCodeUnit {
     val mnemonic = opcode.mnemonic
     val primaryMnemonic = mnemonic.displayName
     val secondaryMnemonic = mnemonic.alternativeName
 
     var suffix = lengthSuffix
-    var operands = metadata?.let { opcode.mode.printWithLabel(this, it) }
+    var operands = gameData?.let { opcode.mode.printWithLabel(this, it) }
     if (operands == null) {
         operands = opcode.mode.printRaw(this)
         suffix = null
     }
 
     val state = postState?.toString()
-    val label = address?.let { metadata?.get(it)?.label }
-    val comment = address?.let { metadata?.get(it)?.comment }
+    val label = address?.let { gameData?.get(it)?.label }
+    val comment = address?.let { gameData?.get(it)?.comment }
     val formattedAddress = address?.toFormattedString()
     val bytes = bytesToString()
 

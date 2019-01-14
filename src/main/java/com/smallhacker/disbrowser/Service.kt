@@ -1,10 +1,10 @@
 package com.smallhacker.disbrowser
 
 import com.smallhacker.disbrowser.asm.*
+import com.smallhacker.disbrowser.game.Game
 import com.smallhacker.disbrowser.disassembler.Disassembler
-import com.smallhacker.disbrowser.util.jsonFile
+import com.smallhacker.disbrowser.game.GameData
 import com.smallhacker.disbrowser.util.toUInt24
-import java.nio.file.Paths
 import kotlin.reflect.KMutableProperty1
 
 private val RESET_VECTOR_LOCATION = address(0x00_FFFC)
@@ -25,37 +25,26 @@ private val VECTORS = listOf(
 )
 
 object Service {
-    private const val romName = "Zelda no Densetsu - Kamigami no Triforce (Japan)"
-    private val romDir = Paths.get("""P:\Emulation\ROMs\SNES""")
-    private val metaDir = Paths.get("""P:\Programming\disbrowser""")
-    private val metaFile = jsonFile<Metadata>(metaDir.resolve("$romName.json"), true)
-    private val metadata by lazy { metaFile.load() }
-
-    private val snesMemory by lazy {
-        val path = romDir.resolve("$romName.sfc")
-        SnesLoRom(loadRomData(path))
-    }
-
-    fun showDisassemblyFromReset(): HtmlNode? {
-        val resetVector = snesMemory.getWord(RESET_VECTOR_LOCATION)
+    fun showDisassemblyFromReset(game: Game): HtmlNode? {
+        val resetVector = game.memory.getWord(RESET_VECTOR_LOCATION)
         val fullResetVector = resetVector!!.toUInt24()
         val initialAddress = SnesAddress(fullResetVector)
         val flags = VagueNumber(0x30u)
-        return showDisassembly(initialAddress, flags)
+        return showDisassembly(game, initialAddress, flags)
     }
 
-    fun showDisassembly(initialAddress: SnesAddress, flags: VagueNumber): HtmlNode? {
-        val initialState = State(memory = snesMemory, address = initialAddress, flags = flags, metadata = metadata)
-        val disassembly = Disassembler.disassemble(initialState, metadata, false)
+    fun showDisassembly(game: Game, initialAddress: SnesAddress, flags: VagueNumber): HtmlNode? {
+        val initialState = State(memory = game.memory, address = initialAddress, flags = flags, gameData = game.gameData)
+        val disassembly = Disassembler.disassemble(initialState, game.gameData, false)
 
-        return print(disassembly, metadata)
+        return print(disassembly, game)
     }
 
 
-    private fun print(disassembly: Disassembly, metadata: Metadata): HtmlNode {
+    private fun print(disassembly: Disassembly, game: Game): HtmlNode {
         val grid = Grid()
         disassembly.forEach {
-            grid.add(it, metadata, disassembly)
+            grid.add(it, game, disassembly)
         }
         disassembly.asSequence()
                 .mapNotNull {
@@ -70,28 +59,27 @@ object Service {
         return grid.output()
     }
 
-    fun updateMetadata(address: SnesAddress, field: KMutableProperty1<MetadataLine, String?>, value: String) {
+    fun updateMetadata(game: Game, address: SnesAddress, field: KMutableProperty1<MetadataLine, String?>, value: String) {
         if (value.isEmpty()) {
-            if (address in metadata) {
-                doUpdateMetadata(address, field, null)
+            if (address in game.gameData) {
+                doUpdateMetadata(game, address, field, null)
             }
         } else {
-            doUpdateMetadata(address, field, value)
+            doUpdateMetadata(game, address, field, value)
         }
     }
 
-    private fun doUpdateMetadata(address: SnesAddress, field: KMutableProperty1<MetadataLine, String?>, value: String?) {
-        val line = metadata.getOrCreate(address)
+    private fun doUpdateMetadata(game: Game, address: SnesAddress, field: KMutableProperty1<MetadataLine, String?>, value: String?) {
+        val line = game.gameData.getOrCreate(address)
         field.set(line, value)
 
-        metadata.cleanUp()
-        metaFile.save(metadata)
+        game.saveGameData()
     }
 
-    fun getVectors() = VECTORS.asSequence()
+    fun getVectors(game: Game) = VECTORS.asSequence()
             .map { (vectorLocation: SnesAddress, name: String ) ->
-                val codeLocation = SnesAddress(snesMemory.getWord(vectorLocation)!!.toUInt24())
-                val label = metadata[codeLocation]?.label
+                val codeLocation = SnesAddress(game.memory.getWord(vectorLocation)!!.toUInt24())
+                val label = game.gameData[codeLocation]?.label
                         ?: codeLocation.toFormattedString()
                 Vector(vectorLocation, codeLocation, name, label)
             }

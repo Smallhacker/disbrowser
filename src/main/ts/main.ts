@@ -74,9 +74,10 @@ for (let i = 0; i < editables.length; i++) {
         let target = <HTMLInputElement>(e.target);
         let field = target.dataset.field || "";
         let address = target.dataset.address;
+        let game = target.dataset.game;
         let value = (target).value;
 
-        xhr(`/rest/${address}/${field}`, "POST", value)
+        xhr(`/rest/${game}/${address}/${field}`, "POST", value)
             .catch((xhr: XMLHttpRequest) => alert("Error: HTTP " + xhr.status));
 
         return false;
@@ -94,12 +95,13 @@ for (let i = 0; i < popupEditables.length; i++) {
         let field = editable.dataset.field || "";
         let address = editable.dataset.address;
         let value = editable.dataset.value;
+        let game = editable.dataset.game;
         let newValue = prompt("Label for $" + address, value);
         if (newValue === null || newValue == value) {
             return false;
         }
 
-        xhr(`/rest/${address}/${field}`, "POST", newValue)
+        xhr(`/rest/${game}/${address}/${field}`, "POST", newValue)
             .then(() => location.reload())
             .catch((xhr: XMLHttpRequest) => alert("Error: HTTP " + xhr.status));
 

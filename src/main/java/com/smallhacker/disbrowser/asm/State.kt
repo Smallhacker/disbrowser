@@ -1,10 +1,11 @@
 package com.smallhacker.disbrowser.asm
 
 import com.smallhacker.disbrowser.ImmStack
+import com.smallhacker.disbrowser.game.GameData
 import com.smallhacker.disbrowser.immStack
 import com.smallhacker.disbrowser.util.toUInt24
 
-data class State(val origin: Instruction? = null, val memory: SnesMapper, val address: SnesAddress, val flags: VagueNumber = VagueNumber(), val stack: ImmStack<VagueNumber> = immStack(), val metadata: Metadata) {
+data class State(val origin: Instruction? = null, val memory: SnesMemory, val address: SnesAddress, val flags: VagueNumber = VagueNumber(), val stack: ImmStack<VagueNumber> = immStack(), val gameData: GameData) {
     val m: Boolean? get() = flags.getBoolean(0x20u)
     val x: Boolean? get() = flags.getBoolean(0x10u)
     val db: UByte? get() = pb // TODO

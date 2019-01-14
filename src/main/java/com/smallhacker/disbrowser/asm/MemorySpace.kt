@@ -39,11 +39,6 @@ fun ValidMemorySpace.getLong(address: UInt): UInt24 = joinBytes(this[address], t
 fun ValidMemorySpace.range(start: UInt, length: UInt): ValidMemorySpace = MemoryRange(this, start, length).validate()!!
 fun ValidMemorySpace.range(start: SnesAddress, length: UInt): ValidMemorySpace = range(start.value.toUInt(), length).validate()!!
 
-fun loadRomData(path: Path): MemorySpace {
-    val bytes = Files.readAllBytes(path).toUByteArray()
-    return ArrayMemorySpace(bytes)
-}
-
 class ArrayMemorySpace(private val bytes: UByteArray) : MemorySpace {
     override val size = bytes.size.toUInt()
 

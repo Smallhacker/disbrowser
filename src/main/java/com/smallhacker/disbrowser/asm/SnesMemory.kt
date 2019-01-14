@@ -3,8 +3,10 @@ package com.smallhacker.disbrowser.asm
 import com.smallhacker.disbrowser.datatype.MutableRangeMap
 import com.smallhacker.disbrowser.datatype.NaiveRangeMap
 import com.smallhacker.disbrowser.util.toUInt24
+import java.nio.file.Files
+import java.nio.file.Path
 
-abstract class SnesMapper: MemorySpace {
+abstract class SnesMemory: MemorySpace {
     override val size = 0x100_0000u
     private val areas: MutableRangeMap<UInt, UIntRange, MapperEntry> = NaiveRangeMap()
 
@@ -24,6 +26,15 @@ abstract class SnesMapper: MemorySpace {
         val offset = address.value - entry.start
         return entry.canonicalStart + offset.toInt()
     }
+
+    companion object {
+        fun loadRom(path: Path): SnesMemory {
+            val bytes = Files.readAllBytes(path).toUByteArray()
+            val romSpace = ArrayMemorySpace(bytes)
+            // TODO: Auto-detect ROM type
+            return SnesLoRom(romSpace)
+        }
+    }
 }
 
 operator fun MemorySpace.get(address: SnesAddress) = get(address.value.toUInt())
@@ -32,7 +43,7 @@ fun MemorySpace.getLong(address: SnesAddress) = getLong(address.value.toUInt())
 
 data class MapperEntry(val start: UInt, val canonicalStart: SnesAddress, val space: MemorySpace)
 
-class SnesLoRom(romData: MemorySpace): SnesMapper() {
+class SnesLoRom(romData: MemorySpace): SnesMemory() {
     init {
         val ram = UnreadableMemory(0x2_0000u)
         val ramMirror = ram.range(0x00_0000u, 0x00_2000u)
@@ -58,10 +69,18 @@ class SnesLoRom(romData: MemorySpace): SnesMapper() {
         }
 
         for (bank in 0x40u..0x6Fu) {
-            val romArea = (bank shl 16) or 0x00_8000u
-            // Lower half unmapped
-            add(romArea, romArea, romData.range(pc, 0x00_8000u))
-            add(romArea + high, romArea, romData.range(pc, 0x00_8000u))
+            val lowerRomArea = (bank shl 16)
+            val upperRomArea = (bank shl 16) or 0x00_8000u
+            // Mirror upper and lower banks to the same ROM space.
+            // Some games map it this way, some leave the lower half completely unmapped
+            // While not 100% correct, we do the former to support as many games as possible
+
+            // Of note, we choose to explicitly define the upper half to be the canonical half.
+
+            add(lowerRomArea, upperRomArea, romData.range(pc, 0x00_8000u))
+            add(lowerRomArea + high, upperRomArea, romData.range(pc, 0x00_8000u))
+            add(upperRomArea, upperRomArea, romData.range(pc, 0x00_8000u))
+            add(upperRomArea + high, upperRomArea, romData.range(pc, 0x00_8000u))
             pc += 0x00_8000u
         }
 

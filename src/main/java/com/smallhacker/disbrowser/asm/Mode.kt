@@ -1,5 +1,6 @@
 package com.smallhacker.disbrowser.asm
 
+import com.smallhacker.disbrowser.game.GameData
 import com.smallhacker.disbrowser.util.*
 
 interface Mode {
@@ -7,7 +8,7 @@ interface Mode {
     val showLengthSuffix get() = true
     val canHaveLabel: Boolean
     fun operandLength(state: State): UInt?
-    fun printWithLabel(ins: CodeUnit, metadata: Metadata): String? = referencedAddress(ins)?.let { metadata[it]?.label }
+    fun printWithLabel(ins: CodeUnit, gameData: GameData): String? = referencedAddress(ins)?.let { gameData[it]?.label }
     fun printRaw(ins: CodeUnit): String
     fun referencedAddress(ins: CodeUnit): SnesAddress?
 }
@@ -30,7 +31,7 @@ private abstract class RawWrappedMode(
         private val suffix: String = ""
 ) : Mode by parent {
     override val canHaveLabel = false
-    override fun printWithLabel(ins: CodeUnit, metadata: Metadata): String? = printRaw(ins)
+    override fun printWithLabel(ins: CodeUnit, gameData: GameData): String? = printRaw(ins)
     override fun printRaw(ins: CodeUnit) = prefix + parent.printRaw(ins) + suffix
 }
 
@@ -39,7 +40,7 @@ private abstract class WrappedMode(
         private val prefix: String = "",
         private val suffix: String = ""
 ) : Mode by parent {
-    override fun printWithLabel(ins: CodeUnit, metadata: Metadata): String? = parent.printWithLabel(ins, metadata)?.let { prefix + it + suffix }
+    override fun printWithLabel(ins: CodeUnit, gameData: GameData): String? = parent.printWithLabel(ins, gameData)?.let { prefix + it + suffix }
     override fun printRaw(ins: CodeUnit) = prefix + parent.printRaw(ins) + suffix
 }
 
@@ -50,7 +51,7 @@ abstract class MultiMode(private val fallback: Mode, private vararg val options:
 
     override fun operandLength(state: State) = get(state) { operandLength(state) }
 
-    override fun printWithLabel(ins: CodeUnit, metadata: Metadata): String? = get(ins.preState) { printWithLabel(ins, metadata) }
+    override fun printWithLabel(ins: CodeUnit, gameData: GameData): String? = get(ins.preState) { printWithLabel(ins, gameData) }
 
     override fun printRaw(ins: CodeUnit) = get(ins.preState) { printRaw(ins) }
 
@@ -73,9 +74,9 @@ abstract class MultiMode(private val fallback: Mode, private vararg val options:
 }
 
 private interface DataValueType {
-    fun resolve(byte: UByte, state: State?, memory: SnesMapper): SnesAddress?
-    fun resolve(word: UShort, state: State?, memory: SnesMapper): SnesAddress?
-    fun resolve(long: UInt24, state: State?, memory: SnesMapper): SnesAddress?
+    fun resolve(byte: UByte, state: State?, memory: SnesMemory): SnesAddress?
+    fun resolve(word: UShort, state: State?, memory: SnesMemory): SnesAddress?
+    fun resolve(long: UInt24, state: State?, memory: SnesMemory): SnesAddress?
     val canHaveLabel: Boolean
 
     val byte: Mode get() = DataByteMode(this)
@@ -85,23 +86,23 @@ private interface DataValueType {
 
 object DirectData : DataValueType {
     override val canHaveLabel = false
-    override fun resolve(byte: UByte, state: State?, memory: SnesMapper): SnesAddress? = null
-    override fun resolve(word: UShort, state: State?, memory: SnesMapper): SnesAddress? = null
-    override fun resolve(long: UInt24, state: State?, memory: SnesMapper): SnesAddress? = null
+    override fun resolve(byte: UByte, state: State?, memory: SnesMemory): SnesAddress? = null
+    override fun resolve(word: UShort, state: State?, memory: SnesMemory): SnesAddress? = null
+    override fun resolve(long: UInt24, state: State?, memory: SnesMemory): SnesAddress? = null
 }
 
 object DataPointer : DataValueType {
     override val canHaveLabel = true
-    override fun resolve(byte: UByte, state: State?, memory: SnesMapper) = state?.resolveDirectPage(byte)
-    override fun resolve(word: UShort, state: State?, memory: SnesMapper) = state?.resolveAbsoluteData(word)
-    override fun resolve(long: UInt24, state: State?, memory: SnesMapper) = memory.toCanonical(SnesAddress(long))
+    override fun resolve(byte: UByte, state: State?, memory: SnesMemory) = state?.resolveDirectPage(byte)
+    override fun resolve(word: UShort, state: State?, memory: SnesMemory) = state?.resolveAbsoluteData(word)
+    override fun resolve(long: UInt24, state: State?, memory: SnesMemory) = memory.toCanonical(SnesAddress(long))
 }
 
 object CodePointer : DataValueType {
     override val canHaveLabel = true
-    override fun resolve(byte: UByte, state: State?, memory: SnesMapper) = state?.resolveDirectPage(byte)
-    override fun resolve(word: UShort, state: State?, memory: SnesMapper) = state?.resolveAbsoluteCode(word)
-    override fun resolve(long: UInt24, state: State?, memory: SnesMapper) = memory.toCanonical(SnesAddress(long))
+    override fun resolve(byte: UByte, state: State?, memory: SnesMemory) = state?.resolveDirectPage(byte)
+    override fun resolve(word: UShort, state: State?, memory: SnesMemory) = state?.resolveAbsoluteCode(word)
+    override fun resolve(long: UInt24, state: State?, memory: SnesMemory) = memory.toCanonical(SnesAddress(long))
 }
 
 private abstract class DataValueMode(private val length: UInt, protected val type: DataValueType) : Mode {

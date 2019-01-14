@@ -1,6 +1,8 @@
 package com.smallhacker.disbrowser
 
 import com.smallhacker.disbrowser.asm.*
+import com.smallhacker.disbrowser.game.Game
+import com.smallhacker.disbrowser.game.GameData
 
 class Grid {
     private val arrowCells = HashMap<Pair<Int, Int>, HtmlNode?>()
@@ -45,7 +47,6 @@ class Grid {
             arrowClasses[x to y] = "arrow arrow-$dir-middle"
         }
         arrowClasses[x to y2] = "arrow arrow-$dir-end"
-        //arrowCells[x to yStart] = a().addClass("arrow-link").attr("href", "#${to.toSimpleString()}")
         arrowCells[x to yEnd] = div().addClass("arrow-head")
     }
 
@@ -59,8 +60,9 @@ class Grid {
                 .first()
     }
 
-    fun add(ins: CodeUnit, metadata: Metadata, disassembly: Disassembly) {
+    fun add(ins: CodeUnit, game: Game, disassembly: Disassembly) {
         val presentedAddress = ins.presentedAddress
+        val gameData = game.gameData
 
         if (nextAddress != null) {
             if (presentedAddress != nextAddress) {
@@ -73,12 +75,12 @@ class Grid {
         addresses[presentedAddress] = y
 
         val (address, bytes, label, primaryMnemonic, secondaryMnemonic, suffix, operands, state, comment, labelAddress)
-                = ins.print(metadata)
+                = ins.print(gameData)
 
         add(y, ins.address,
                 text(address ?: ""),
                 text(bytes),
-                editableField(presentedAddress, "label", label),
+                editableField(game, presentedAddress, "label", label),
                 fragment {
                     if (secondaryMnemonic == null) {
                         text(primaryMnemonic)
@@ -94,18 +96,16 @@ class Grid {
                         if (labelAddress == null) {
                             text(operands ?: "")
                         } else {
-                            val currentLabel = metadata[labelAddress]?.label
-                            editablePopupField(labelAddress, "label", operands, currentLabel)
+                            val currentLabel = gameData[labelAddress]?.label
+                            editablePopupField(game, labelAddress, "label", operands, currentLabel)
                         }
                     } else {
                         val local = link.address in disassembly
 
                         val url = when {
                             local -> "#${link.address.toSimpleString()}"
-                            else -> "/${link.address.toSimpleString()}/${link.urlString}"
+                            else -> "/${game.id}/${link.address.toSimpleString()}/${link.urlString}"
                         }
-
-                        //operands = metadata[link.address]?.label ?: operands
 
                         a {
                             text(operands ?: "")
@@ -113,7 +113,7 @@ class Grid {
                     }
                 },
                 text(state ?: ""),
-                editableField(presentedAddress, "comment", comment)
+                editableField(game, presentedAddress, "comment", comment)
         )
 
         if (ins.opcode.continuation == Continuation.NO) {
@@ -121,15 +121,16 @@ class Grid {
         }
     }
 
-    private fun editableField(address: SnesAddress, type: String, value: String?): HtmlNode {
+    private fun editableField(game: Game, address: SnesAddress, type: String, value: String?): HtmlNode {
         return input(value = value ?: "")
                 .addClass("field-$type")
                 .addClass("field-editable")
                 .attr("data-field", type)
+                .attr("data-game", game.id)
                 .attr("data-address", address.toSimpleString())
     }
 
-    private fun HtmlArea.editablePopupField(address: SnesAddress, type: String, displayValue: String?, editValue: String?) {
+    private fun HtmlArea.editablePopupField(game: Game, address: SnesAddress, type: String, displayValue: String?, editValue: String?) {
         span {
             text(displayValue ?: "")
             span {}.addClass("field-editable-popup-icon")
@@ -138,6 +139,7 @@ class Grid {
                 .addClass("field-editable-popup")
                 .attr("data-field", type)
                 .attr("data-value", editValue ?: "")
+                .attr("data-game", game.id)
                 .attr("data-address", address.toSimpleString())
     }
 

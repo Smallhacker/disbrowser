@@ -1,42 +1,51 @@
-package com.smallhacker.disbrowser.asm
+package com.smallhacker.disbrowser.game
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.smallhacker.disbrowser.asm.*
 import com.smallhacker.disbrowser.util.joinNullableBytes
 import com.smallhacker.disbrowser.util.removeIf
 import com.smallhacker.disbrowser.util.toUInt24
 import java.util.*
 
-class Metadata {
+class GameData {
     @JsonProperty
-    private val code: MutableMap<SnesAddress, MetadataLine>
+    val name: String
+    @JsonProperty
+    val path: String
+    @JsonProperty
+    private val metadata: MutableMap<SnesAddress, MetadataLine>
 
-    constructor() {
-        this.code = TreeMap()
+    constructor(name: String, path: String) {
+        this.name = name
+        this.path = path
+        this.metadata = TreeMap()
     }
 
     @JsonCreator
-    private constructor(@JsonProperty code: Map<SnesAddress, MetadataLine>) {
-        this.code = TreeMap(code)
+    private constructor(@JsonProperty name: String, @JsonProperty path: String, @JsonProperty metadata: Map<SnesAddress, MetadataLine>) {
+        this.name = name
+        this.path = path
+        this.metadata = TreeMap(metadata)
     }
 
-    operator fun set(address: SnesAddress, line: MetadataLine?): Metadata {
+    operator fun set(address: SnesAddress, line: MetadataLine?): GameData {
         if (line == null) {
-            code.remove(address)
+            metadata.remove(address)
         } else {
-            code[address] = line
+            metadata[address] = line
         }
         return this
     }
 
     operator fun get(address: SnesAddress): MetadataLine? {
-        return code[address]
+        return metadata[address]
     }
 
-    operator fun contains(address: SnesAddress) = code[address] != null
+    operator fun contains(address: SnesAddress) = metadata[address] != null
 
     fun getOrCreate(address: SnesAddress): MetadataLine {
         val line = this[address]
@@ -49,7 +58,7 @@ class Metadata {
     }
 
     fun cleanUp() {
-        code.removeIf { _, v -> v.isEmpty() }
+        metadata.removeIf { _, v -> v.isEmpty() }
     }
 }
 
