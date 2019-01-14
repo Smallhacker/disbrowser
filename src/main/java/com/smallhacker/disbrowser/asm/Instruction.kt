@@ -6,8 +6,9 @@ import com.smallhacker.disbrowser.util.*
 interface CodeUnit {
     val address: SnesAddress?
     val relativeAddress: SnesAddress
-    val presentedAddress: SnesAddress
-    val nextPresentedAddress: SnesAddress
+    val indicativeAddress: SnesAddress
+    val sortedAddress: SnesAddress
+    val nextSortedAddress: SnesAddress
 
     val linkedState: State?
     val preState: State?
@@ -55,13 +56,14 @@ interface CodeUnit {
 class DataBlock(
         override val opcode: Opcode,
         override val bytes: ValidMemorySpace,
-        override val presentedAddress: SnesAddress,
+        override val indicativeAddress: SnesAddress,
+        override val sortedAddress: SnesAddress,
         override val relativeAddress: SnesAddress,
         override val linkedState: State?,
         override val memory: SnesMemory
 ) : CodeUnit {
-    override val nextPresentedAddress: SnesAddress
-        get() = presentedAddress + operandLength.toInt()
+    override val nextSortedAddress: SnesAddress
+        get() = sortedAddress + operandLength.toInt()
     override val operandLength get() = bytes.size
 
     override val address: SnesAddress? = null
@@ -73,9 +75,10 @@ class DataBlock(
 class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opcode, override val preState: State) : CodeUnit {
     override val memory = preState.memory
     override val address: SnesAddress get() = preState.address
+    override val indicativeAddress get() = address
     override val relativeAddress get() = address
-    override val presentedAddress get() = address
-    override val nextPresentedAddress get() = postState.address
+    override val sortedAddress get() = address
+    override val nextSortedAddress get() = postState.address
 
     override val postState = opcode.mutate(this)
             .mutateAddress { it + bytes.size.toInt() }
@@ -136,8 +139,8 @@ fun CodeUnit.print(gameData: GameData? = null): PrintedCodeUnit {
     }
 
     val state = postState?.toString()
-    val label = address?.let { gameData?.get(it)?.label }
-    val comment = address?.let { gameData?.get(it)?.comment }
+    val label = gameData?.get(indicativeAddress)?.label
+    val comment = gameData?.get(indicativeAddress)?.comment
     val formattedAddress = address?.toFormattedString()
     val bytes = bytesToString()
 

@@ -104,6 +104,7 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
                     DataBlock(
                             Opcode.CODE_POINTER_LONG,
                             table.range(offset, 3u),
+                            start + offset.toInt(),
                             jumpInstruction.postState.address + offset.toInt(),
                             jumpInstruction.relativeAddress,
                             jumpInstruction.opcode.mutate(jumpInstruction)

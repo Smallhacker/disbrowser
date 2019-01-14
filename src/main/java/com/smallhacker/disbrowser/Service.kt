@@ -48,10 +48,10 @@ object Service {
             grid.add(it, game, disassembly)
         }
         disassembly.asSequence()
-                .mapNotNull {
-                    it.linkedState
+                .mapNotNull {ins ->
+                    ins.linkedState
                             ?.let { link ->
-                                it.presentedAddress to link.address
+                                ins.sortedAddress to link.address
                             }
                 }
                 .sortedBy { it.first distanceTo it.second }

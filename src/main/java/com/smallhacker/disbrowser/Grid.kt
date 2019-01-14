@@ -2,7 +2,6 @@ package com.smallhacker.disbrowser
 
 import com.smallhacker.disbrowser.asm.*
 import com.smallhacker.disbrowser.game.Game
-import com.smallhacker.disbrowser.game.GameData
 
 class Grid {
     private val arrowCells = HashMap<Pair<Int, Int>, HtmlNode?>()
@@ -61,18 +60,19 @@ class Grid {
     }
 
     fun add(ins: CodeUnit, game: Game, disassembly: Disassembly) {
-        val presentedAddress = ins.presentedAddress
+        val sortedAddress = ins.sortedAddress
+        val indicativeAddress = ins.indicativeAddress
         val gameData = game.gameData
 
         if (nextAddress != null) {
-            if (presentedAddress != nextAddress) {
+            if (sortedAddress != nextAddress) {
                 addDummy()
             }
         }
-        nextAddress = ins.nextPresentedAddress
+        nextAddress = ins.nextSortedAddress
 
         val y = (height++)
-        addresses[presentedAddress] = y
+        addresses[sortedAddress] = y
 
         val (address, bytes, label, primaryMnemonic, secondaryMnemonic, suffix, operands, state, comment, labelAddress)
                 = ins.print(gameData)
@@ -80,7 +80,7 @@ class Grid {
         add(y, ins.address,
                 text(address ?: ""),
                 text(bytes),
-                editableField(game, presentedAddress, "label", label),
+                editableField(game, indicativeAddress, "label", label),
                 fragment {
                     if (secondaryMnemonic == null) {
                         text(primaryMnemonic)
@@ -113,7 +113,7 @@ class Grid {
                     }
                 },
                 text(state ?: ""),
-                editableField(game, presentedAddress, "comment", comment)
+                editableField(game, indicativeAddress, "comment", comment)
         )
 
         if (ins.opcode.continuation == Continuation.NO) {

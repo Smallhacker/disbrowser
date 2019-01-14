@@ -78,7 +78,7 @@ object Disassembler {
         }
 
         val instructionList = instructions
-                .sortedBy { it.presentedAddress }
+                .sortedBy { it.sortedAddress }
                 .toList()
 
         return Disassembly(instructionList)
