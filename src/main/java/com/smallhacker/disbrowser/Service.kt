@@ -8,6 +8,7 @@ import com.smallhacker.disbrowser.util.toUInt24
 import kotlin.reflect.KMutableProperty1
 
 private val RESET_VECTOR_LOCATION = address(0x00_FFFC)
+private val UPDATE_MUTEX = Any()
 
 private val VECTORS = listOf(
         address(0x00_FFE4) to "COP",
@@ -60,12 +61,14 @@ object Service {
     }
 
     fun updateMetadata(game: Game, address: SnesAddress, field: KMutableProperty1<MetadataLine, String?>, value: String) {
-        if (value.isEmpty()) {
-            if (address in game.gameData) {
-                doUpdateMetadata(game, address, field, null)
+        synchronized(UPDATE_MUTEX) {
+            if (value.isEmpty()) {
+                if (address in game.gameData) {
+                    doUpdateMetadata(game, address, field, null)
+                }
+            } else {
+                doUpdateMetadata(game, address, field, value)
             }
-        } else {
-            doUpdateMetadata(game, address, field, value)
         }
     }
 
