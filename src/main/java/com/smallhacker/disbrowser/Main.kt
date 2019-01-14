@@ -12,22 +12,22 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 object Main {
-    private const val BASE_URI = "http://localhost:8080/"
-
-    private fun startServer(path: Path): HttpServer {
+    private fun startServer(uri: URI, path: Path): HttpServer {
         val rc = ResourceConfig()
                 .packages("com.smallhacker.disbrowser.resource")
                 .addGameSource(path)
-        return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc)
+        return GrizzlyHttpServerFactory.createHttpServer(uri, rc)
     }
 
     @Throws(IOException::class)
     @JvmStatic
     fun main(args: Array<String>) {
-        if (args.size != 1) {
-            throw IllegalArgumentException("Game data directory needed")
+        if (args.size != 2) {
+            throw IllegalArgumentException("Usage: \"http://websitelocation:1234\" \"/path/to/game/data/directory\"")
         }
-        val server = startServer(Paths.get(args[0]))
+        val uri = URI.create(args[0])
+        val dir = Paths.get(args[1])
+        val server = startServer(uri, dir)
         println("Server started. Press any key to stop.")
         System.`in`.read()
         server.stop()
