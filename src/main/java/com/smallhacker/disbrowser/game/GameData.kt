@@ -62,11 +62,22 @@ class GameData {
     }
 }
 
+fun GameData.flagsAt(snesAddress: SnesAddress?): MetadataLineFlags =
+        MetadataLineFlags(get(snesAddress)?.flags ?: emptyList())
+
+inline class MetadataLineFlags(val flags: List<InstructionFlag>) {
+    inline fun <reified F> findFlag() = flags.asSequence().filterIsInstance<F>().firstOrNull()
+    inline fun <reified F> forFlag(action: F.() -> Unit) = findFlag<F>()?.run(action)
+}
+
+operator fun GameData.get(address: SnesAddress?) = if (address == null) null else this[address]
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "flagType")
 @JsonSubTypes(
         Type(value = NonReturningRoutine::class, name = "NonReturningRoutine"),
         Type(value = JmpIndirectLongInterleavedTable::class, name = "JmpIndirectLongInterleavedTable"),
-        Type(value = JslTableRoutine::class, name = "JslTableRoutine")
+        Type(value = JslTableRoutine::class, name = "JslTableRoutine"),
+        Type(value = PointerTableLength::class, name = "PointerTableLength")
 )
 interface InstructionFlag
 
@@ -88,7 +99,7 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
                 .map { pointer -> pointer?.let { SnesAddress(it) } }
     }
 
-    fun generateCode(jumpInstruction: Instruction): Sequence<DataBlock> {
+    fun generatePointerTable(jumpInstruction: Instruction): Sequence<DataBlock> {
         val table = jumpInstruction.preState.memory.deinterleave(uEntries,
                 start.value.toUInt(),
                 (start + entries).value.toUInt(),
@@ -110,7 +121,8 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
                             jumpInstruction.opcode.mutate(jumpInstruction)
                                     .mutateAddress { SnesAddress(target) }
                                     .withOrigin(jumpInstruction),
-                            jumpInstruction.memory
+                            jumpInstruction.memory,
+                            Certainty.PROBABLY_CORRECT
                     )
                 }
     }
@@ -118,18 +130,68 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
     override fun toString() = "JmpIndirectLongInterleavedTable($start, $entries)"
 }
 
-class JslTableRoutine @JsonCreator constructor(
-        @field:JsonProperty @JsonProperty private val entries: Int
-) : InstructionFlag {
-
-    fun readTable(postJsr: State): Sequence<SnesAddress?> {
+class JslTableRoutine : InstructionFlag {
+    fun readTable(postJsr: State, entryCount: Int): Sequence<SnesAddress?> {
         val data = postJsr.memory
-        return (0 until entries)
+        return (0 until entryCount)
                 .asSequence()
                 .map { postJsr.address + (it * 3) }
                 .map { address -> joinNullableBytes(data[address], data[address + 1], data[address + 2])?.toUInt24() }
                 .map { pointer -> pointer?.let { SnesAddress(it) } }
     }
 
-    override fun toString() = "JslTableRoutine($entries)"
+    fun generatePointerTable(jumpInstruction: Instruction, entryCount: UInt?): Sequence<DataBlock> {
+        val count: UInt
+        var certainty: Certainty
+        val certaintyDecrease: Int
+
+        if (entryCount == null) {
+            count = 30u
+            certainty = Certainty.UNCERTAIN
+            certaintyDecrease = 5
+        } else {
+            count = entryCount
+            certainty = Certainty.PROBABLY_CORRECT
+            certaintyDecrease = 0
+        }
+
+        val start = jumpInstruction.postState.address
+        val memory = jumpInstruction.memory
+
+        return (0u until count.toUInt())
+                .asSequence()
+                .map { index -> index * 3u }
+                .mapNotNull { offset ->
+                    val pointerLoc= start + offset.toInt()
+                    val addressRange = memory.range(pointerLoc, 3u).validate()
+
+                    if (addressRange == null) {
+                        null
+                    } else {
+                        val target = addressRange.getLong(0u)
+
+                        val block = DataBlock(
+                                Opcode.CODE_POINTER_LONG,
+                                addressRange,
+                                pointerLoc,
+                                jumpInstruction.relativeAddress,
+                                jumpInstruction.opcode.mutate(jumpInstruction)
+                                        .mutateAddress { SnesAddress(target) }
+                                        .withOrigin(jumpInstruction),
+                                memory,
+                                certainty
+                        )
+                        certainty -= certaintyDecrease
+                        block
+                    }
+                }
+    }
+
+    override fun toString() = "JslTableRoutine"
+}
+
+class PointerTableLength @JsonCreator constructor(
+        @field:JsonProperty @JsonProperty val entries: Int
+) : InstructionFlag {
+    override fun toString() = "PointerTableLength($entries)"
 }

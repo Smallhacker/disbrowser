@@ -19,6 +19,7 @@ interface CodeUnit {
     val lengthSuffix: String?
 
     val memory: SnesMemory
+    val certainty: Certainty
 
     fun operandByte(index: UInt): UByte = bytes[opcode.operandIndex + index]
 
@@ -56,23 +57,64 @@ interface CodeUnit {
 class DataBlock(
         override val opcode: Opcode,
         override val bytes: ValidMemorySpace,
+        override val address: SnesAddress?,
         override val indicativeAddress: SnesAddress,
         override val sortedAddress: SnesAddress,
         override val relativeAddress: SnesAddress,
         override val linkedState: State?,
-        override val memory: SnesMemory
+        override val memory: SnesMemory,
+        override val certainty: Certainty
 ) : CodeUnit {
+    constructor(
+            opcode: Opcode,
+            bytes: ValidMemorySpace,
+            indicativeAddress: SnesAddress,
+            sortedAddress: SnesAddress,
+            relativeAddress: SnesAddress,
+            linkedState: State?,
+            memory: SnesMemory,
+            certainty: Certainty
+    ) : this(opcode, bytes, null, indicativeAddress, sortedAddress, relativeAddress, linkedState, memory, certainty)
+
+    constructor(
+            opcode: Opcode,
+            bytes: ValidMemorySpace,
+            address: SnesAddress,
+            relativeAddress: SnesAddress,
+            linkedState: State?,
+            memory: SnesMemory,
+            certainty: Certainty
+    ) : this(opcode, bytes, address, address, address, relativeAddress, linkedState, memory, certainty)
+
     override val nextSortedAddress: SnesAddress
         get() = sortedAddress + operandLength.toInt()
     override val operandLength get() = bytes.size
 
-    override val address: SnesAddress? = null
     override val preState: State? = null
     override val postState: State? = null
     override val lengthSuffix: String? = null
 }
 
-class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opcode, override val preState: State) : CodeUnit {
+interface Instruction : CodeUnit {
+    override val preState: State
+    override val address: SnesAddress
+    override val postState: State
+
+    val continuation: Continuation
+    val showLengthSuffix: Boolean
+    fun link(): SnesAddress?
+    fun referencedAddress(): SnesAddress?
+
+    override fun toString(): String
+}
+
+class MutableInstruction(
+        override val bytes: ValidMemorySpace,
+        override val opcode: Opcode,
+        override val preState: State,
+        override var continuation: Continuation,
+        override var certainty: Certainty
+) : Instruction {
     override val memory = preState.memory
     override val address: SnesAddress get() = preState.address
     override val indicativeAddress get() = address
@@ -89,7 +131,7 @@ class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opc
                 .withOrigin(this)
     }
 
-    private val showLengthSuffix get() = opcode.mode.showLengthSuffix and opcode.mnemonic.showLengthSuffix
+    override val showLengthSuffix get() = opcode.mode.showLengthSuffix and opcode.mnemonic.showLengthSuffix
 
     override val lengthSuffix: String?
         get() {
@@ -109,7 +151,7 @@ class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opc
     override val operandLength
         get() = opcode.mode.operandLength(preState)
 
-    private fun link(): SnesAddress? {
+    override fun link(): SnesAddress? {
         if (!opcode.link) {
             return null
         }
@@ -117,7 +159,7 @@ class Instruction(override val bytes: ValidMemorySpace, override val opcode: Opc
         return referencedAddress()
     }
 
-    private fun referencedAddress() = opcode.mode.referencedAddress(this)
+    override fun referencedAddress() = opcode.mode.referencedAddress(this)
 
     override fun toString(): String {
         val (address, bytes, _, primaryMnemonic, _, suffix, operands, _, _) = print()

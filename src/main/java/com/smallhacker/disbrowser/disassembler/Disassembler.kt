@@ -1,24 +1,29 @@
 package com.smallhacker.disbrowser.disassembler
 
 import com.smallhacker.disbrowser.asm.*
-import com.smallhacker.disbrowser.game.GameData
-import com.smallhacker.disbrowser.game.JmpIndirectLongInterleavedTable
-import com.smallhacker.disbrowser.game.JslTableRoutine
-import com.smallhacker.disbrowser.game.NonReturningRoutine
+import com.smallhacker.disbrowser.game.*
+import com.smallhacker.disbrowser.util.mutableMultiMap
+import com.smallhacker.disbrowser.util.putSingle
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 object Disassembler {
     fun disassemble(initialState: State, gameData: GameData, global: Boolean): Disassembly {
         val seen = HashSet<SnesAddress>()
         val queue = ArrayDeque<State>()
+        val origins = mutableMultiMap<SnesAddress, SnesAddress>()
+        val instructionMap = HashMap<SnesAddress, MutableInstruction>()
 
-        fun tryAdd(state: State) {
+        fun tryAdd(state: State, origin: SnesAddress?) {
+            if (origin != null) {
+                origins.putSingle(state.address, origin)
+            }
             if (seen.add(state.address)) {
                 queue.add(state)
             }
         }
-        tryAdd(initialState)
+        tryAdd(initialState, null)
 
         val instructions = ArrayList<CodeUnit>()
         while (queue.isNotEmpty()) {
@@ -26,55 +31,92 @@ object Disassembler {
 
             val ins = disassembleInstruction(state)
             instructions.add(ins)
+            instructionMap[ins.address] = ins
 
-            var stop = (ins.opcode.continuation == Continuation.NO) or
-                    (ins.opcode.mode.instructionLength(state) == null)
-
-            gameData[ins.address]?.flags?.forEach { flag ->
-                if (flag is JmpIndirectLongInterleavedTable) {
-                    if (global) {
-                        flag.readTable(state.memory)
-                                .filterNotNull()
-                                .map { ins.postState.copy(address = it) }
-                                .forEach { tryAdd(it) }
-                    }
-
-                    flag.generateCode(ins)
-                            .forEach { instructions.add(it) }
-
-                    stop = true
-                } else if (flag is JslTableRoutine) {
-                    if (global) {
-                        flag.readTable(ins.postState)
-                                .filterNotNull()
-                                .map { ins.postState.copy(address = it) }
-                                .forEach { tryAdd(it) }
-                    }
-                    stop = true
-                }
+            if (ins.opcode.mode.instructionLength(state) == null) {
+                ins.continuation = Continuation.INSUFFICIENT_DATA
             }
 
             val linkedState = ins.linkedState
 
-            if (linkedState != null) {
-                gameData[linkedState.address]?.flags?.forEach {
-                    if (it === NonReturningRoutine) {
-                        stop = true
-                        println(ins.address.toFormattedString())
-                    }
+            val localAddress = ins.address
+            val remoteAddress = linkedState?.address
+
+            val localFlags = gameData.flagsAt(localAddress)
+            val remoteFlags = gameData.flagsAt(remoteAddress)
+
+            val pointerTableEntries = localFlags.findFlag<PointerTableLength>()?.entries
+
+            localFlags.forFlag<JmpIndirectLongInterleavedTable> {
+                ins.continuation = Continuation.STOP
+
+                if (global) {
+                    readTable(state.memory)
+                            .filterNotNull()
+                            .map { ins.postState.copy(address = it) }
+                            .forEach { tryAdd(it, ins.address) }
+                }
+
+                generatePointerTable(ins).forEach {
+                    instructions.add(it)
                 }
             }
 
-            if (!stop) {
-                tryAdd(ins.postState)
+            remoteFlags.forFlag<JslTableRoutine> {
+                ins.continuation = Continuation.STOP
+
+                if (pointerTableEntries != null) {
+                    if (global) {
+                        readTable(ins.postState, pointerTableEntries)
+                                .filterNotNull()
+                                .map { ins.postState.copy(address = it) }
+                                .forEach { tryAdd(it, ins.address) }
+                    }
+                }
+
+                generatePointerTable(ins, pointerTableEntries?.toUInt()).forEach {
+                    instructions.add(it)
+                }
+
+            }
+
+            remoteFlags.forFlag<NonReturningRoutine> {
+                ins.continuation = Continuation.STOP
+            }
+
+
+            if (!ins.continuation.shouldStop) {
+                tryAdd(ins.postState, ins.address)
             }
 
 
             if (linkedState != null) {
                 if (ins.opcode.branch || global) {
-                    tryAdd(linkedState)
+                    tryAdd(linkedState, ins.address)
                 }
             }
+        }
+
+        val fatalSeen = HashSet<SnesAddress>()
+        val fatalQueue = ArrayDeque<SnesAddress>()
+        fun tryAddFatal(snesAddress: SnesAddress) {
+            if (fatalSeen.add(snesAddress)) {
+                fatalQueue.addLast(snesAddress)
+            }
+        }
+
+        instructions.asSequence()
+                .filterIsInstance<Instruction>()
+                .filter { it.continuation == Continuation.FATAL_ERROR }
+                .forEach { tryAddFatal(it.address) }
+
+        while (fatalQueue.isNotEmpty()) {
+            val badAddress = fatalQueue.removeFirst()!!
+            val instruction = instructionMap[badAddress] ?: continue
+            val mnemonic = instruction.opcode.mnemonic
+            if (mnemonic == Mnemonic.JSL || mnemonic == Mnemonic.JSR) continue
+            instruction.certainty = Certainty.PROBABLY_WRONG
+            origins[badAddress]?.forEach{tryAddFatal(it)}
         }
 
         val instructionList = instructions
@@ -118,8 +160,6 @@ object Disassembler {
             end.remote.forEach {
 
             }
-
-
         }
 
         return segments
@@ -167,15 +207,17 @@ object Disassembler {
         return finalize(Segment(initialState.address, continuationSegmentEnd(lastState), instructions))
     }
 
-    private fun disassembleInstruction(state: State): Instruction {
+    private fun disassembleInstruction(state: State): MutableInstruction {
         val opcodeValue = state.memory[state.address] ?: return unreadableInstruction(state)
         val opcode = Opcode.opcode(opcodeValue)
         val length = opcode.mode.instructionLength(state) ?: 1u
         val bytes = state.memory.range(state.address.value.toUInt(), length).validate()
-            ?: return unreadableInstruction(state)
-        return Instruction(bytes, opcode, state)
+                ?: return unreadableInstruction(state)
+        val continuation = opcode.continuation
+        val certainty = Certainty.PROBABLY_CORRECT
+        return MutableInstruction(bytes, opcode, state, continuation, certainty)
     }
 
     private fun unreadableInstruction(state: State) =
-            Instruction(EmptyMemorySpace, Opcode.UNKNOWN_OPCODE, state)
+            MutableInstruction(EmptyMemorySpace, Opcode.UNKNOWN_OPCODE, state, Continuation.INSUFFICIENT_DATA, Certainty.PROBABLY_WRONG)
 }

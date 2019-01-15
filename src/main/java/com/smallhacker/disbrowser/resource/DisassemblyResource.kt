@@ -88,7 +88,7 @@ class DisassemblyResource {
             return Response.ok(html.toString().toByteArray(StandardCharsets.UTF_8))
                     .encoding("UTF-8")
                     .build()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             e.printStackTrace()
             throw e
         }

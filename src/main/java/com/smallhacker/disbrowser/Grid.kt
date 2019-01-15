@@ -12,6 +12,7 @@ class Grid {
     private val cellClasses = HashMap<Pair<Int, Int>, String>()
     private val addresses = HashMap<SnesAddress, Int>()
     private val rowClasses = HashMap<Int, String>()
+    private val rowCertainties = HashMap<Int, String>()
     private val rowId = HashMap<Int, String>()
     private var height = 0
     private var nextAddress: SnesAddress? = null
@@ -116,9 +117,11 @@ class Grid {
                 editableField(game, indicativeAddress, "comment", comment)
         )
 
-        if (ins.opcode.continuation == Continuation.NO) {
+        if (ins.opcode.continuation.shouldStop) {
             rowClasses[y] = "routine-end"
         }
+
+        rowCertainties[y] = ins.certainty.value.toString()
     }
 
     private fun editableField(game: Game, address: SnesAddress, type: String, value: String?): HtmlNode {
@@ -194,7 +197,9 @@ class Grid {
                             content[x to y]?.appendTo(parent)
                         }.addClass(cssClass)
                     }
-                }.addClass(rowClasses[y]).attr("id", rowId[y])
+                }.addClass(rowClasses[y])
+                        .attr("id", rowId[y])
+                        .attr("row-certainty", rowCertainties[y])
             }
         }
     }

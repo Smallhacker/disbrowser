@@ -128,3 +128,53 @@ tr.line-active {
 .field-editable-popup-icon::before {
     content: "[e]"
 }
+
+[row-certainty="0"],[row-certainty="1"],[row-certainty="2"],[row-certainty="3"],[row-certainty="4"],
+[row-certainty="5"],[row-certainty="6"],[row-certainty="7"],[row-certainty="8"],[row-certainty="9"] {
+    color: rgb(200,200,200);
+}
+
+[row-certainty="10"],[row-certainty="11"],[row-certainty="12"],[row-certainty="13"],[row-certainty="14"],
+[row-certainty="15"],[row-certainty="16"],[row-certainty="17"],[row-certainty="18"],[row-certainty="19"] {
+    color: rgb(180,180,180);
+}
+
+[row-certainty="20"],[row-certainty="21"],[row-certainty="22"],[row-certainty="23"],[row-certainty="24"],
+[row-certainty="25"],[row-certainty="26"],[row-certainty="27"],[row-certainty="28"],[row-certainty="29"] {
+    color: rgb(160,160,160);
+}
+
+[row-certainty="30"],[row-certainty="31"],[row-certainty="32"],[row-certainty="33"],[row-certainty="34"],
+[row-certainty="35"],[row-certainty="36"],[row-certainty="37"],[row-certainty="38"],[row-certainty="39"] {
+    color: rgb(140,140,140);
+}
+
+[row-certainty="40"],[row-certainty="41"],[row-certainty="42"],[row-certainty="43"],[row-certainty="44"],
+[row-certainty="45"],[row-certainty="46"],[row-certainty="47"],[row-certainty="48"],[row-certainty="49"] {
+    color: rgb(120,120,120);
+}
+
+[row-certainty="50"],[row-certainty="51"],[row-certainty="52"],[row-certainty="53"],[row-certainty="54"],
+[row-certainty="55"],[row-certainty="56"],[row-certainty="57"],[row-certainty="58"],[row-certainty="59"] {
+    color: rgb(100,100,100);
+}
+
+[row-certainty="60"],[row-certainty="61"],[row-certainty="62"],[row-certainty="63"],[row-certainty="64"],
+[row-certainty="65"],[row-certainty="66"],[row-certainty="67"],[row-certainty="68"],[row-certainty="69"] {
+    color: rgb(80,80,80);
+}
+
+[row-certainty="70"],[row-certainty="71"],[row-certainty="72"],[row-certainty="73"],[row-certainty="74"],
+[row-certainty="75"],[row-certainty="76"],[row-certainty="77"],[row-certainty="78"],[row-certainty="79"] {
+    color: rgb(60,60,60);
+}
+
+[row-certainty="80"],[row-certainty="81"],[row-certainty="82"],[row-certainty="83"],[row-certainty="84"],
+[row-certainty="85"],[row-certainty="86"],[row-certainty="87"],[row-certainty="88"],[row-certainty="89"] {
+    color: rgb(40,40,40);
+}
+
+[row-certainty="90"],[row-certainty="91"],[row-certainty="92"],[row-certainty="93"],[row-certainty="94"],
+[row-certainty="95"],[row-certainty="96"],[row-certainty="97"],[row-certainty="98"],[row-certainty="99"] {
+    color: rgb(20,20,20);
+}

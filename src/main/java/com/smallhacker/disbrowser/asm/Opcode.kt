@@ -7,15 +7,13 @@ import com.smallhacker.disbrowser.asm.Mnemonic.*
 typealias SegmentEnder = Instruction.() -> SegmentEnd?
 
 class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val ender: SegmentEnder, val mutate: (Instruction) -> State) {
-    private var _continuation = Continuation.YES
     private var _link = false
     private var _branch = false
 
     val operandIndex
         get() = if (mode.dataMode) 0u else 1u
 
-    val continuation: Continuation
-        get() = _continuation
+    var continuation: Continuation = Continuation.CONTINUE
 
     val link: Boolean
         get() = _link
@@ -23,15 +21,13 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
     val branch: Boolean
         get() = _branch
 
-    private fun stop(): Opcode {
-        this._continuation = Continuation.NO
-        return this
-    }
+    private fun insufficientData() = also { this.continuation = Continuation.INSUFFICIENT_DATA }
 
-    private fun mayStop(): Opcode {
-        this._continuation = Continuation.MAYBE
-        return this
-    }
+    private fun fatal() = also { this.continuation = Continuation.FATAL_ERROR }
+
+    private fun stop() = also { this.continuation = Continuation.STOP }
+
+    private fun mayStop() = also { this.continuation = Continuation.MAY_STOP }
 
     private fun linking(): Opcode {
         this._link = true
@@ -80,15 +76,14 @@ class Opcode private constructor(val mnemonic: Mnemonic, val mode: Mode, val end
             val dynamicSubJumping: SegmentEnder = { stoppingSegmentEnd(address) }
             val returning: SegmentEnder = { returnSegmentEnd(address) }
 
-            UNKNOWN_OPCODE = Opcode(UNKNOWN, Implied, alwaysStop, Instruction::preState).stop()
+            UNKNOWN_OPCODE = Opcode(UNKNOWN, Implied, alwaysStop, Instruction::preState).insufficientData()
 
-            add(0x00, BRK, Immediate8, alwaysStop).stop()
-            add(0x02, COP, Immediate8, alwaysStop).stop()
-            add(0x42, WDM, Immediate8, alwaysStop).stop()
+            add(0x00, BRK, Immediate8, alwaysStop).fatal()
+            add(0x02, COP, Immediate8, alwaysStop).fatal()
+            add(0x42, WDM, Immediate8, alwaysStop).fatal()
+            add(0xDB, STP, Implied, alwaysStop).fatal()
 
             add(0xEA, NOP, Implied, alwaysContinue)
-
-            add(0xDB, STP, Implied, alwaysStop).stop()
             add(0xCB, WAI, Implied, alwaysContinue)
 
             add(0x10, BPL, Relative, branching).branching()
