@@ -47,7 +47,9 @@ class Grid {
             arrowClasses[x to y] = "arrow arrow-$dir-middle"
         }
         arrowClasses[x to y2] = "arrow arrow-$dir-end"
-        arrowCells[x to yEnd] = div().addClass("arrow-head")
+        arrowCells[x to yEnd] = htmlFragment {
+            div.addClass("arrow-head")
+        }
     }
 
     private fun nextArrowX(y1: Int, y2: Int): Int {
@@ -79,10 +81,14 @@ class Grid {
                 = ins.print(gameData)
 
         add(y, ins.address,
-                text(address ?: ""),
-                text(bytes),
+                htmlFragment {
+                    text(address ?: "")
+                },
+                htmlFragment {
+                    text(bytes)
+                },
                 editableField(game, indicativeAddress, "label", label),
-                fragment {
+                htmlFragment {
                     if (secondaryMnemonic == null) {
                         text(primaryMnemonic)
                     } else {
@@ -113,7 +119,9 @@ class Grid {
                         }.attr("href", url)
                     }
                 },
-                text(state ?: ""),
+                htmlFragment {
+                    text(state ?: "")
+                },
                 editableField(game, indicativeAddress, "comment", comment)
         )
 
@@ -125,12 +133,15 @@ class Grid {
     }
 
     private fun editableField(game: Game, address: SnesAddress, type: String, value: String?): HtmlNode {
-        return input(value = value ?: "")
-                .addClass("field-$type")
-                .addClass("field-editable")
-                .attr("data-field", type)
-                .attr("data-game", game.id)
-                .attr("data-address", address.toSimpleString())
+        return htmlFragment {
+            input.attr("value", value ?: "")
+                    .attr("type", "text")
+                    .addClass("field-$type")
+                    .addClass("field-editable")
+                    .attr("data-field", type)
+                    .attr("data-game", game.id)
+                    .attr("data-address", address.toSimpleString())
+        }
     }
 
     private fun HtmlArea.editablePopupField(game: Game, address: SnesAddress, type: String, displayValue: String?, editValue: String?) {
@@ -148,7 +159,17 @@ class Grid {
 
     private fun addDummy() {
         val y = (height++)
-        add(y, null, null, null, null, text("..."), null, null)
+        add(y,
+                null,
+                null,
+                null,
+                null,
+                htmlFragment {
+                    text("...")
+                },
+                null,
+                null
+        )
     }
 
     private fun add(y: Int, address: SnesAddress?,
@@ -176,30 +197,32 @@ class Grid {
                 .max()
                 ?: -1
 
-        return table {
-            for (y in 0 until height) {
-                tr {
-                    for (x in 0..3) {
-                        val cssClass = cellClasses[x to y]
-                        td {
-                            content[x to y]?.appendTo(parent)
-                        }.addClass(cssClass)
-                    }
-                    for (x in 0 until arrowWidth) {
-                        val cssClass = arrowClasses[x to y]
-                        td {
-                            arrowCells[x to y]?.appendTo(parent)
-                        }.addClass(cssClass)
-                    }
-                    for (x in 4..contentMaxX) {
-                        val cssClass = cellClasses[x to y]
-                        td {
-                            content[x to y]?.appendTo(parent)
-                        }.addClass(cssClass)
-                    }
-                }.addClass(rowClasses[y])
-                        .attr("id", rowId[y])
-                        .attr("row-certainty", rowCertainties[y])
+        return htmlFragment {
+            table {
+                for (y in 0 until height) {
+                    tr {
+                        for (x in 0..3) {
+                            val cssClass = cellClasses[x to y]
+                            td {
+                                content[x to y]?.appendTo(parent)
+                            }.addClass(cssClass)
+                        }
+                        for (x in 0 until arrowWidth) {
+                            val cssClass = arrowClasses[x to y]
+                            td {
+                                arrowCells[x to y]?.appendTo(parent)
+                            }.addClass(cssClass)
+                        }
+                        for (x in 4..contentMaxX) {
+                            val cssClass = cellClasses[x to y]
+                            td {
+                                content[x to y]?.appendTo(parent)
+                            }.addClass(cssClass)
+                        }
+                    }.addClass(rowClasses[y])
+                            .attr("id", rowId[y])
+                            .attr("row-certainty", rowCertainties[y])
+                }
             }
         }
     }

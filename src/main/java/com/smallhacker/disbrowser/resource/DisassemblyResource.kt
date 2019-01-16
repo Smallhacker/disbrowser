@@ -25,20 +25,22 @@ class DisassemblyResource {
     @Produces(MediaType.TEXT_HTML)
     fun getIt(@PathParam("game") gameName: String) = handle {
         games.getGame(gameName)?.let { game ->
-            table {
-                Service.getVectors(game).forEach {
-                    tr {
-                        td { text(it.name) }
-                        td { text("(" + it.vectorLocation.toFormattedString() + ")") }
-                        td {
-                            a {
-                                text(it.label)
-                            }.attr("href", "/${game.id}/${it.codeLocation.toSimpleString()}/MX")
+            htmlFragment {
+                table {
+                    Service.getVectors(game).forEach {
+                        tr {
+                            td { text(it.name) }
+                            td { text("(" + it.vectorLocation.toFormattedString() + ")") }
+                            td {
+                                a {
+                                    text(it.label)
+                                }.attr("href", "/${game.id}/${it.codeLocation.toSimpleString()}/MX")
+                            }
+                            td { text("(" + it.codeLocation.toFormattedString() + ")") }
                         }
-                        td { text("(" + it.codeLocation.toFormattedString() + ")") }
                     }
-                }
-            }.addClass("vector-table")
+                }.addClass("vector-table")
+            }
         }
     }
 
@@ -73,17 +75,29 @@ class DisassemblyResource {
             val output = runner()
                     ?: return Response.status(404).build()
 
-            val html = html {
-                head {
-                    title { text("Disassembly Browser") }
-                    link {}.attr("rel", "stylesheet").attr("href", "/resources/style.css")
-                    meta {}.attr("charset", "UTF-8")
-                }
-                body {
-                    output.appendTo(parent)
-                    script().attr("src", "/resources/disbrowser.js")
-                }
-            }
+            val html =
+                    htmlFragment {
+                        html {
+                            head {
+                                title { text("Disassembly Browser") }
+                                link.attr("rel", "stylesheet").attr("href", "/resources/style.css")
+                                meta.attr("charset", "UTF-8")
+                            }
+                            body {
+                                main {
+                                    output.appendTo(parent)
+                                }
+
+                                aside.addClass("sidebar") {
+                                    button.attr("id", "btn-dark-mode") {
+                                        text("Dark Mode")
+                                    }
+                                }
+
+                                script.attr("src", "/resources/disbrowser.js")
+                            }
+                        }
+                    }
 
             return Response.ok(html.toString().toByteArray(StandardCharsets.UTF_8))
                     .encoding("UTF-8")

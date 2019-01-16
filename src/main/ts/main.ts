@@ -108,3 +108,56 @@ for (let i = 0; i < popupEditables.length; i++) {
         return false;
     });
 }
+
+class PersistentProperty<T> {
+    private _value: T;
+    private readonly key: string;
+    private readonly onChange: (value: T) => void;
+
+    constructor(key: string, defaultValue: T, onChange: (value: T) => void) {
+        this.key = key;
+        this.onChange = onChange;
+        this.value = this.parse(key, defaultValue);
+    }
+
+    get value(): T {
+        return this._value;
+    }
+
+    set value(value: T) {
+        this._value = value;
+        localStorage.setItem(this.key, JSON.stringify(value));
+        this.onChange(value);
+    }
+
+    private parse(key: string, defaultValue: T): T {
+        let value = localStorage.getItem(key);
+        if (value === null) {
+            return defaultValue;
+        }
+        let parsedValue = JSON.parse(value);
+        if (parsedValue === null) {
+            return defaultValue;
+        }
+        return parsedValue;
+    }
+}
+
+let darkMode = new PersistentProperty<boolean>(
+    "ui.presentation.darkMode",
+    false,
+    (enable) => {
+        if (enable) {
+            document.body.classList.add("dark-mode")
+        } else {
+            document.body.classList.remove("dark-mode")
+        }
+    }
+);
+
+let btnDarkMode = document.getElementById("btn-dark-mode");
+if (btnDarkMode) {
+    btnDarkMode.addEventListener("click", () => {
+        darkMode.value = !darkMode.value;
+    })
+}
