@@ -87,3 +87,13 @@ fun <K, V> MutableMap<K, V>.removeIf(condition: (K, V) -> Boolean) {
             .toList()
             .forEach { remove(it) }
 }
+
+fun hashOf(vararg values: Any?): Int {
+    return if (values.isEmpty()) {
+        0
+    } else {
+        values.asSequence()
+                .map { it.hashCode() }
+                .reduce { acc, v -> (acc * 31) + v }
+    }
+}

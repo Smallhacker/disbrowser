@@ -1,7 +1,5 @@
 package com.smallhacker.disbrowser.util
 
-import java.util.*
-
 abstract class UType(val bytes: Int, val name: String) {
     val mask = (1 shl (bytes * 8)) - 1
 }
@@ -22,7 +20,7 @@ class UVal<U : UType>(value: Int, val type: U) : Comparable<UVal<U>> {
 
     override fun compareTo(other: UVal<U>): Int = Integer.compare(value, other.value)
 
-    override fun hashCode() = Objects.hash(value, type)
+    override fun hashCode() = hashOf(value, type)
 
     //fun value(value: Int) = UVal(value, type)
     //fun mutate(mutator: (Int) -> Int) = UVal(mutator(value), type)

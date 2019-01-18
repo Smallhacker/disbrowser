@@ -1,7 +1,5 @@
 package com.smallhacker.disbrowser.asm
 
-import java.util.HashMap
-
 import com.smallhacker.disbrowser.asm.Mnemonic.*
 
 typealias SegmentEnder = Instruction.() -> SegmentEnd?

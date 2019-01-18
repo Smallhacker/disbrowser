@@ -3,6 +3,7 @@ package com.smallhacker.disbrowser.game
 import com.smallhacker.disbrowser.asm.SnesMemory
 import com.smallhacker.disbrowser.util.jsonFile
 import org.glassfish.jersey.server.ResourceConfig
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -34,7 +35,8 @@ class GameSource(private val gameDataDir: Path) {
 
             val gameData = gameDataJsonFile.load()
             val gamePath = Paths.get(gameData.path)
-            val rom = SnesMemory.loadRom(gamePath)
+            val romData = Files.readAllBytes(gamePath).toUByteArray()
+            val rom = SnesMemory.loadRom(romData)
             Game(name, rom, gameData, gameDataJsonFile)
         } catch (e: Exception) {
             e.printStackTrace()

@@ -2,16 +2,16 @@ package com.smallhacker.disbrowser.disassembler
 
 import com.smallhacker.disbrowser.asm.*
 import com.smallhacker.disbrowser.game.*
+import com.smallhacker.disbrowser.util.LifoQueue
 import com.smallhacker.disbrowser.util.mutableMultiMap
 import com.smallhacker.disbrowser.util.putSingle
-import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 object Disassembler {
     fun disassemble(initialState: State, gameData: GameData, global: Boolean): Disassembly {
         val seen = HashSet<SnesAddress>()
-        val queue = ArrayDeque<State>()
+        val queue = LifoQueue<State>()
         val origins = mutableMultiMap<SnesAddress, SnesAddress>()
         val instructionMap = HashMap<SnesAddress, MutableInstruction>()
 
@@ -27,7 +27,7 @@ object Disassembler {
 
         val instructions = ArrayList<CodeUnit>()
         while (queue.isNotEmpty()) {
-            val state = queue.remove()
+            val state = queue.removeNext()
 
             val ins = disassembleInstruction(state)
             instructions.add(ins)
@@ -98,10 +98,10 @@ object Disassembler {
         }
 
         val fatalSeen = HashSet<SnesAddress>()
-        val fatalQueue = ArrayDeque<SnesAddress>()
+        val fatalQueue = LifoQueue<SnesAddress>()
         fun tryAddFatal(snesAddress: SnesAddress) {
             if (fatalSeen.add(snesAddress)) {
-                fatalQueue.addLast(snesAddress)
+                fatalQueue.add(snesAddress)
             }
         }
 
@@ -111,7 +111,7 @@ object Disassembler {
                 .forEach { tryAddFatal(it.address) }
 
         while (fatalQueue.isNotEmpty()) {
-            val badAddress = fatalQueue.removeFirst()!!
+            val badAddress = fatalQueue.removeNext()!!
             val instruction = instructionMap[badAddress] ?: continue
             val mnemonic = instruction.opcode.mnemonic
             if (mnemonic == Mnemonic.JSL || mnemonic == Mnemonic.JSR) continue
@@ -128,7 +128,7 @@ object Disassembler {
 
     fun disassembleSegments(initialState: State): List<Segment> {
         val mapping = HashMap<SnesAddress, Segment>()
-        val queue = ArrayDeque<State>()
+        val queue = LifoQueue<State>()
 
         val segments = ArrayList<Segment>()
 
@@ -141,7 +141,7 @@ object Disassembler {
 
 
         while (queue.isNotEmpty()) {
-            val state = queue.remove()
+            val state = queue.removeNext()
 
             if (mapping.containsKey(state.address)) {
                 continue
@@ -169,7 +169,7 @@ object Disassembler {
         val instructions = ArrayList<Instruction>()
         var lastState = initialState
 
-        val queue = ArrayDeque<State>()
+        val queue = LifoQueue<State>()
         val seen = HashSet<SnesAddress>()
 
         fun finalize(segment: Segment): Segment {
@@ -187,7 +187,7 @@ object Disassembler {
         tryAdd(initialState)
 
         while (queue.isNotEmpty()) {
-            val state = queue.remove()
+            val state = queue.removeNext()
 
             val ins = disassembleInstruction(state)
             instructions.add(ins)

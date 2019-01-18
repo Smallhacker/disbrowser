@@ -4,8 +4,6 @@ import com.smallhacker.disbrowser.util.UInt24
 import com.smallhacker.disbrowser.util.joinBytes
 import com.smallhacker.disbrowser.util.joinNullableBytes
 import com.smallhacker.disbrowser.util.toUInt24
-import java.nio.file.Files
-import java.nio.file.Path
 
 interface MemorySpace {
     val size: UInt

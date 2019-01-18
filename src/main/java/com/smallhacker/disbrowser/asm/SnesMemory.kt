@@ -3,8 +3,6 @@ package com.smallhacker.disbrowser.asm
 import com.smallhacker.disbrowser.datatype.MutableRangeMap
 import com.smallhacker.disbrowser.datatype.NaiveRangeMap
 import com.smallhacker.disbrowser.util.toUInt24
-import java.nio.file.Files
-import java.nio.file.Path
 
 abstract class SnesMemory: MemorySpace {
     override val size = 0x100_0000u
@@ -28,9 +26,8 @@ abstract class SnesMemory: MemorySpace {
     }
 
     companion object {
-        fun loadRom(path: Path): SnesMemory {
-            val bytes = Files.readAllBytes(path).toUByteArray()
-            val romSpace = ArrayMemorySpace(bytes)
+        fun loadRom(fileData: UByteArray): SnesMemory {
+            val romSpace = ArrayMemorySpace(fileData)
             // TODO: Auto-detect ROM type
             return SnesLoRom(romSpace)
         }
