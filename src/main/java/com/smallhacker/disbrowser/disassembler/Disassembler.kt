@@ -62,7 +62,7 @@ object Disassembler {
                 }
             }
 
-            remoteFlags.forFlag<JslTableRoutine> {
+            remoteFlags.forFlag<DynamicJumpRoutine> {
                 ins.continuation = Continuation.STOP
 
                 if (pointerTableEntries != null) {
@@ -158,7 +158,7 @@ object Disassembler {
             end.local.forEach { queue.add(it) }
 
             end.remote.forEach {
-
+                queue.add(it)
             }
         }
 
@@ -191,12 +191,11 @@ object Disassembler {
 
             val ins = disassembleInstruction(state)
             instructions.add(ins)
-            println(ins)
+            //println(ins)
 
             val segmentEnd = ins.opcode.ender(ins)
 
             if (segmentEnd != null) {
-
                 return finalize(Segment(initialState.address, segmentEnd, instructions))
             }
 

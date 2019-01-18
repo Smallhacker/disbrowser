@@ -3,7 +3,6 @@ package com.smallhacker.disbrowser.resource
 import com.smallhacker.disbrowser.*
 import com.smallhacker.disbrowser.asm.SnesAddress
 import com.smallhacker.disbrowser.asm.VagueNumber
-import com.smallhacker.disbrowser.game.GameSource
 import com.smallhacker.disbrowser.game.getGameSource
 import java.nio.charset.StandardCharsets
 import javax.ws.rs.GET
@@ -65,6 +64,32 @@ class DisassemblyResource {
                 SnesAddress.parse(address)?.let {
                     val flags = parseState(state)
                     Service.showDisassembly(game, it, flags)
+                }
+            }
+        }
+    }
+
+    @GET
+    @Path("global/{address}")
+    @Produces(MediaType.TEXT_HTML)
+    fun getItGlobal(
+            @PathParam("game") gameName: String,
+            @PathParam("address") address: String
+    ) = getItGlobal(gameName, address, "")
+
+    @GET
+    @Path("global/{address}/{state}")
+    @Produces(MediaType.TEXT_HTML)
+    fun getItGlobal(
+            @PathParam("game") gameName: String,
+            @PathParam("address") address: String,
+            @PathParam("state") state: String
+    ): Response {
+        return handle {
+            games.getGame(gameName)?.let { game ->
+                SnesAddress.parse(address)?.let {
+                    val flags = parseState(state)
+                    Service.showDisassembly(game, it, flags, true)
                 }
             }
         }

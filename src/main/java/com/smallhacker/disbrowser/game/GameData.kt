@@ -77,6 +77,7 @@ operator fun GameData.get(address: SnesAddress?) = if (address == null) null els
         Type(value = NonReturningRoutine::class, name = "NonReturningRoutine"),
         Type(value = JmpIndirectLongInterleavedTable::class, name = "JmpIndirectLongInterleavedTable"),
         Type(value = JslTableRoutine::class, name = "JslTableRoutine"),
+        Type(value = JsrTableRoutine::class, name = "JsrTableRoutine"),
         Type(value = PointerTableLength::class, name = "PointerTableLength")
 )
 interface InstructionFlag
@@ -130,15 +131,14 @@ class JmpIndirectLongInterleavedTable @JsonCreator constructor(
     override fun toString() = "JmpIndirectLongInterleavedTable($start, $entries)"
 }
 
-class JslTableRoutine : InstructionFlag {
-    fun readTable(postJsr: State, entryCount: Int): Sequence<SnesAddress?> {
-        val data = postJsr.memory
+interface DynamicJumpRoutine : InstructionFlag {
+    fun readTable(postJump: State, entryCount: Int): Sequence<SnesAddress?> {
         return (0 until entryCount)
                 .asSequence()
-                .map { postJsr.address + (it * 3) }
-                .map { address -> joinNullableBytes(data[address], data[address + 1], data[address + 2])?.toUInt24() }
-                .map { pointer -> pointer?.let { SnesAddress(it) } }
+                .map { readEntry(postJump, it) }
     }
+
+    fun readEntry(postJump: State, index: Int): SnesAddress?
 
     fun generatePointerTable(jumpInstruction: Instruction, entryCount: UInt?): Sequence<DataBlock> {
         val count: UInt
@@ -155,39 +155,91 @@ class JslTableRoutine : InstructionFlag {
             certaintyDecrease = 0
         }
 
-        val start = jumpInstruction.postState.address
-        val memory = jumpInstruction.memory
-
-        return (0u until count.toUInt())
+        return (0u until count)
                 .asSequence()
-                .map { index -> index * 3u }
-                .mapNotNull { offset ->
-                    val pointerLoc= start + offset.toInt()
-                    val addressRange = memory.range(pointerLoc, 3u).validate()
-
-                    if (addressRange == null) {
-                        null
-                    } else {
-                        val target = addressRange.getLong(0u)
-
-                        val block = DataBlock(
-                                Opcode.CODE_POINTER_LONG,
-                                addressRange,
-                                pointerLoc,
-                                jumpInstruction.relativeAddress,
-                                jumpInstruction.opcode.mutate(jumpInstruction)
-                                        .mutateAddress { SnesAddress(target) }
-                                        .withOrigin(jumpInstruction),
-                                memory,
-                                certainty
-                        )
-                        certainty -= certaintyDecrease
-                        block
-                    }
+                .mapNotNull { index ->
+                    generatePointer(jumpInstruction, index, certainty)
+                            ?.also {
+                                certainty -= certaintyDecrease
+                            }
                 }
     }
 
+    fun generatePointer(jumpInstruction: Instruction, index: UInt, certainty: Certainty): DataBlock?
+
+    override fun toString(): String
+}
+
+class JslTableRoutine : DynamicJumpRoutine {
+    override fun readEntry(postJump: State, index: Int): SnesAddress? {
+        val data = postJump.memory
+        val address = postJump.address + (index * 3)
+        return joinNullableBytes(data[address], data[address + 1], data[address + 2])
+                ?.toUInt24()
+                ?.let { SnesAddress(it) }
+    }
+
+    override fun generatePointer(jumpInstruction: Instruction, index: UInt, certainty: Certainty): DataBlock? {
+        val offset = index * 3u
+        val pointerLoc = jumpInstruction.postState.address + offset.toInt()
+        val addressRange = jumpInstruction.memory.range(pointerLoc, 3u).validate()
+
+        if (addressRange == null) {
+            return null
+        } else {
+            val target = addressRange.getLong(0u)
+
+            return DataBlock(
+                    Opcode.CODE_POINTER_LONG,
+                    addressRange,
+                    pointerLoc,
+                    jumpInstruction.relativeAddress,
+                    jumpInstruction.opcode.mutate(jumpInstruction)
+                            .mutateAddress { SnesAddress(target) }
+                            .withOrigin(jumpInstruction),
+                    jumpInstruction.memory,
+                    certainty
+            )
+        }
+    }
+
     override fun toString() = "JslTableRoutine"
+}
+
+class JsrTableRoutine : DynamicJumpRoutine {
+    override fun readEntry(postJump: State, index: Int): SnesAddress? {
+        val data = postJump.memory
+        val address = postJump.address + (index * 2)
+        return joinNullableBytes(data[address], data[address + 1], postJump.pb)
+                ?.toUInt24()
+                ?.let { SnesAddress(it) }
+    }
+
+    override fun generatePointer(jumpInstruction: Instruction, index: UInt, certainty: Certainty): DataBlock? {
+        val offset = index * 2u
+        val pointerLoc = jumpInstruction.postState.address + offset.toInt()
+        val addressRange = jumpInstruction.memory.range(pointerLoc, 2u).validate()
+
+        if (addressRange == null) {
+            return null
+        } else {
+            val target = addressRange.getWord(0u).toUInt24() or (jumpInstruction.postState.pb.toUInt24() shl 16)
+
+            return DataBlock(
+                    Opcode.CODE_POINTER_WORD,
+                    addressRange,
+                    pointerLoc,
+                    jumpInstruction.relativeAddress,
+                    jumpInstruction.opcode.mutate(jumpInstruction)
+                            .mutateAddress { SnesAddress(target) }
+                            .withOrigin(jumpInstruction),
+                    jumpInstruction.memory,
+                    certainty
+            )
+        }
+    }
+
+    override fun toString() = "JsrTableRoutine"
 }
 
 class PointerTableLength @JsonCreator constructor(

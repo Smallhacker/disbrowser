@@ -3,7 +3,6 @@ package com.smallhacker.disbrowser
 import com.smallhacker.disbrowser.asm.*
 import com.smallhacker.disbrowser.game.Game
 import com.smallhacker.disbrowser.disassembler.Disassembler
-import com.smallhacker.disbrowser.game.GameData
 import com.smallhacker.disbrowser.util.toUInt24
 import kotlin.reflect.KMutableProperty1
 
@@ -34,13 +33,12 @@ object Service {
         return showDisassembly(game, initialAddress, flags)
     }
 
-    fun showDisassembly(game: Game, initialAddress: SnesAddress, flags: VagueNumber): HtmlNode? {
+    fun showDisassembly(game: Game, initialAddress: SnesAddress, flags: VagueNumber, global: Boolean = false): HtmlNode? {
         val initialState = State(memory = game.memory, address = initialAddress, flags = flags, gameData = game.gameData)
-        val disassembly = Disassembler.disassemble(initialState, game.gameData, false)
+        val disassembly = Disassembler.disassemble(initialState, game.gameData, global)
 
         return print(disassembly, game)
     }
-
 
     private fun print(disassembly: Disassembly, game: Game): HtmlNode {
         val grid = Grid()
