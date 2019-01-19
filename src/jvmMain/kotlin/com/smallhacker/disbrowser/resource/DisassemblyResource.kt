@@ -101,28 +101,28 @@ class DisassemblyResource {
                     ?: return Response.status(404).build()
 
             val html =
-                    htmlFragment {
-                        html {
-                            head {
-                                title { text("Disassembly Browser") }
-                                link.attr("rel", "stylesheet").attr("href", "/resources/style.css")
-                                meta.attr("charset", "UTF-8")
+                htmlFragment {
+                    html {
+                        head {
+                            title { text("Disassembly Browser") }
+                            link.attr("rel", "stylesheet").attr("href", "/resources/style.css")
+                            meta.attr("charset", "UTF-8")
+                        }
+                        body {
+                            main {
+                                output.appendTo(parent)
                             }
-                            body {
-                                main {
-                                    output.appendTo(parent)
-                                }
 
-                                aside.addClass("sidebar") {
-                                    button.attr("id", "btn-dark-mode") {
-                                        text("Dark Mode")
-                                    }
+                            aside.addClass("sidebar") {
+                                button.attr("id", "btn-dark-mode") {
+                                    text("Dark Mode")
                                 }
-
-                                script.attr("src", "/resources/disbrowser.js")
                             }
+
+                            script.attr("src", "/resources/disbrowser.js")
                         }
                     }
+                }
 
             return Response.ok(html.toString().toByteArray(StandardCharsets.UTF_8))
                     .encoding("UTF-8")

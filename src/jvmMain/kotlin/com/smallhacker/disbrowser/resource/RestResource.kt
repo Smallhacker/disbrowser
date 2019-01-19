@@ -3,7 +3,6 @@ package com.smallhacker.disbrowser.resource
 import com.smallhacker.disbrowser.Service
 import com.smallhacker.disbrowser.asm.SnesAddress
 import com.smallhacker.disbrowser.asm.MetadataLine
-import com.smallhacker.disbrowser.game.GameSource
 import com.smallhacker.disbrowser.game.getGameSource
 import javax.ws.rs.Consumes
 import javax.ws.rs.POST

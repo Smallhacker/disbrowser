@@ -15,7 +15,8 @@ fun <T> immStack(): ImmStack<T> {
     return EmptyImmStack as ImmStack<T>
 }
 
-private class ImmStackImpl<E>(private val parent: ImmStack<E>, override val top: E): ImmStack<E> {
+private class ImmStackImpl<E>(private val parent: ImmStack<E>, override val top: E):
+    ImmStack<E> {
     override fun isEmpty() = false
 
     override fun pop(): ImmStack<E> = parent

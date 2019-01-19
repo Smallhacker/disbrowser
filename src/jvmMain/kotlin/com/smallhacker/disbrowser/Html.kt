@@ -66,10 +66,14 @@ private class HtmlTextNode(private val text: String): HtmlNode {
 }
 
 private object ParentBuilder {
-    operator fun getValue(a: HtmlArea, b: KProperty<*>) = ParentHtmlElement(b.name).appendTo(a.parent)
+    operator fun getValue(a: HtmlArea, b: KProperty<*>) = ParentHtmlElement(
+        b.name
+    ).appendTo(a.parent)
 }
 private object LeafBuilder {
-    operator fun getValue(a: HtmlArea, b: KProperty<*>) = HtmlElement(b.name).appendTo(a.parent)
+    operator fun getValue(a: HtmlArea, b: KProperty<*>) = HtmlElement(
+        b.name
+    ).appendTo(a.parent)
 }
 
 fun htmlFragment(inner: InnerHtml = {}) = object : HtmlNode {
@@ -108,7 +112,9 @@ val HtmlArea.button by ParentBuilder
 fun HtmlNode.appendTo(node: HtmlNode) = apply { node.append(this) }
 fun HtmlNode.addClass(c: String?) = attrAdd("class", c)
 val HtmlNode.inner get() = this
-operator fun HtmlNode.invoke(inner: InnerHtml): HtmlNode = append(htmlFragment(inner))
+operator fun HtmlNode.invoke(inner: InnerHtml): HtmlNode = append(
+    htmlFragment(inner)
+)
 
 fun HtmlNode.attr(key: String, value: String?, inner: InnerHtml) = attr(key, value).inner(inner)
 fun HtmlNode.addClass(c: String?, inner: InnerHtml) = addClass(c).inner(inner)

@@ -111,7 +111,7 @@ object Disassembler {
                 .forEach { tryAddFatal(it.address) }
 
         while (fatalQueue.isNotEmpty()) {
-            val badAddress = fatalQueue.removeNext()!!
+            val badAddress = fatalQueue.removeNext()
             val instruction = instructionMap[badAddress] ?: continue
             val mnemonic = instruction.opcode.mnemonic
             if (mnemonic == Mnemonic.JSL || mnemonic == Mnemonic.JSR) continue

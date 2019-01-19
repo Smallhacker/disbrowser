@@ -81,47 +81,47 @@ class Grid {
                 = ins.print(gameData)
 
         add(y, ins.address,
-                htmlFragment {
-                    text(address ?: "")
-                },
-                htmlFragment {
-                    text(bytes)
-                },
+            htmlFragment {
+                text(address ?: "")
+            },
+            htmlFragment {
+                text(bytes)
+            },
                 editableField(game, indicativeAddress, "label", label),
-                htmlFragment {
-                    if (secondaryMnemonic == null) {
+            htmlFragment {
+                if (secondaryMnemonic == null) {
+                    text(primaryMnemonic)
+                } else {
+                    span {
                         text(primaryMnemonic)
+                    }.attr("title", secondaryMnemonic).addClass("opcode-info")
+                }
+                text(suffix ?: "")
+                text(" ")
+                val link = ins.linkedState
+                if (link == null) {
+                    if (labelAddress == null) {
+                        text(operands ?: "")
                     } else {
-                        span {
-                            text(primaryMnemonic)
-                        }.attr("title", secondaryMnemonic).addClass("opcode-info")
+                        val currentLabel = gameData[labelAddress]?.label
+                        editablePopupField(game, labelAddress, "label", operands, currentLabel)
                     }
-                    text(suffix ?: "")
-                    text(" ")
-                    val link = ins.linkedState
-                    if (link == null) {
-                        if (labelAddress == null) {
-                            text(operands ?: "")
-                        } else {
-                            val currentLabel = gameData[labelAddress]?.label
-                            editablePopupField(game, labelAddress, "label", operands, currentLabel)
-                        }
-                    } else {
-                        val local = link.address in disassembly
+                } else {
+                    val local = link.address in disassembly
 
-                        val url = when {
-                            local -> "#${link.address.toSimpleString()}"
-                            else -> "/${game.id}/${link.address.toSimpleString()}/${link.urlString}"
-                        }
-
-                        a {
-                            text(operands ?: "")
-                        }.attr("href", url)
+                    val url = when {
+                        local -> "#${link.address.toSimpleString()}"
+                        else -> "/${game.id}/${link.address.toSimpleString()}/${link.urlString}"
                     }
-                },
-                htmlFragment {
-                    text(state ?: "")
-                },
+
+                    a {
+                        text(operands ?: "")
+                    }.attr("href", url)
+                }
+            },
+            htmlFragment {
+                text(state ?: "")
+            },
                 editableField(game, indicativeAddress, "comment", comment)
         )
 
@@ -135,12 +135,12 @@ class Grid {
     private fun editableField(game: Game, address: SnesAddress, type: String, value: String?): HtmlNode {
         return htmlFragment {
             input.attr("value", value ?: "")
-                    .attr("type", "text")
-                    .addClass("field-$type")
-                    .addClass("field-editable")
-                    .attr("data-field", type)
-                    .attr("data-game", game.id)
-                    .attr("data-address", address.toSimpleString())
+                .attr("type", "text")
+                .addClass("field-$type")
+                .addClass("field-editable")
+                .attr("data-field", type)
+                .attr("data-game", game.id)
+                .attr("data-address", address.toSimpleString())
         }
     }
 
@@ -164,9 +164,9 @@ class Grid {
                 null,
                 null,
                 null,
-                htmlFragment {
-                    text("...")
-                },
+            htmlFragment {
+                text("...")
+            },
                 null,
                 null
         )
@@ -220,8 +220,8 @@ class Grid {
                             }.addClass(cssClass)
                         }
                     }.addClass(rowClasses[y])
-                            .attr("id", rowId[y])
-                            .attr("row-certainty", rowCertainties[y])
+                        .attr("id", rowId[y])
+                        .attr("row-certainty", rowCertainties[y])
                 }
             }
         }

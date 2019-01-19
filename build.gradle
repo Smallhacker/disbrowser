@@ -1,0 +1,57 @@
+plugins {
+    id 'kotlin-multiplatform' version '1.3.11'
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    targets {
+        fromPreset(presets.jvm, 'jvm')
+        fromPreset(presets.js, 'js')
+    }
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-stdlib-common'
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-test-common'
+                implementation 'org.jetbrains.kotlin:kotlin-test-annotations-common'
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+                implementation 'com.fasterxml.jackson.core:jackson-core:2.9.8'
+                implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
+                implementation 'com.fasterxml.jackson.core:jackson-annotations:2.9.8'
+                implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.9.8'
+                implementation 'org.glassfish.jersey.containers:jersey-container-grizzly2-http:2.27'
+                implementation 'org.glassfish.jersey.inject:jersey-hk2:2.27'
+
+            }
+            languageSettings {
+                enableLanguageFeature('InlineClasses')
+                useExperimentalAnnotation('kotlin.ExperimentalUnsignedTypes')
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-test'
+                implementation 'org.jetbrains.kotlin:kotlin-test-junit'
+            }
+        }
+        jsMain {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-stdlib-js'
+            }
+        }
+        jsTest {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-test-js'
+            }
+        }
+    }
+}
