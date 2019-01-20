@@ -1,9 +1,13 @@
 package com.smallhacker.disbrowser
 
 import com.smallhacker.disbrowser.asm.*
-import com.smallhacker.disbrowser.game.Game
 import com.smallhacker.disbrowser.disassembler.Disassembler
-import com.smallhacker.disbrowser.util.toUInt24
+import com.smallhacker.disbrowser.game.Game
+import com.smallhacker.disbrowser.memory.SnesAddress
+import com.smallhacker.disbrowser.memory.address
+import com.smallhacker.disbrowser.memory.getWord
+import com.smallhacker.util.VagueNumber
+import com.smallhacker.util.toUInt24
 import kotlin.reflect.KMutableProperty1
 
 private val RESET_VECTOR_LOCATION = address(0x00_FFFC)

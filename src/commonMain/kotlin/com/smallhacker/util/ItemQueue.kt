@@ -1,4 +1,4 @@
-package com.smallhacker.disbrowser.util
+package com.smallhacker.util
 
 // The Kotlin standard library does not contain a counterpart to Java's ArrayDeque<E>, so let's implement a simplistic
 // one ourselves for portability.

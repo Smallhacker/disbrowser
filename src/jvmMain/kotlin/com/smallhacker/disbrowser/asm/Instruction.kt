@@ -1,7 +1,14 @@
 package com.smallhacker.disbrowser.asm
 
 import com.smallhacker.disbrowser.game.GameData
-import com.smallhacker.disbrowser.util.*
+import com.smallhacker.disbrowser.game.get
+import com.smallhacker.disbrowser.memory.SnesAddress
+import com.smallhacker.disbrowser.memory.SnesMemory
+import com.smallhacker.disbrowser.memory.ValidMemorySpace
+import com.smallhacker.disbrowser.memory.asSequence
+import com.smallhacker.util.joinBytes
+import com.smallhacker.util.toHex
+import com.smallhacker.util.toUInt24
 
 interface CodeUnit {
     val address: SnesAddress?
@@ -25,7 +32,7 @@ interface CodeUnit {
 
     fun bytesToString(): String {
         return bytes.asSequence()
-                .map { toHex(it.toUInt(), 1u) }
+                .map { it.toHex() }
                 .joinToString(" ")
                 .padEnd(11, ' ')
     }
@@ -55,35 +62,35 @@ interface CodeUnit {
 }
 
 class DataBlock(
-        override val opcode: Opcode,
-        override val bytes: ValidMemorySpace,
-        override val address: SnesAddress?,
-        override val indicativeAddress: SnesAddress,
-        override val sortedAddress: SnesAddress,
-        override val relativeAddress: SnesAddress,
-        override val linkedState: State?,
-        override val memory: SnesMemory,
-        override val certainty: Certainty
+    override val opcode: Opcode,
+    override val bytes: ValidMemorySpace,
+    override val address: SnesAddress?,
+    override val indicativeAddress: SnesAddress,
+    override val sortedAddress: SnesAddress,
+    override val relativeAddress: SnesAddress,
+    override val linkedState: State?,
+    override val memory: SnesMemory,
+    override val certainty: Certainty
 ) : CodeUnit {
     constructor(
-            opcode: Opcode,
-            bytes: ValidMemorySpace,
-            indicativeAddress: SnesAddress,
-            sortedAddress: SnesAddress,
-            relativeAddress: SnesAddress,
-            linkedState: State?,
-            memory: SnesMemory,
-            certainty: Certainty
+        opcode: Opcode,
+        bytes: ValidMemorySpace,
+        indicativeAddress: SnesAddress,
+        sortedAddress: SnesAddress,
+        relativeAddress: SnesAddress,
+        linkedState: State?,
+        memory: SnesMemory,
+        certainty: Certainty
     ) : this(opcode, bytes, null, indicativeAddress, sortedAddress, relativeAddress, linkedState, memory, certainty)
 
     constructor(
-            opcode: Opcode,
-            bytes: ValidMemorySpace,
-            address: SnesAddress,
-            relativeAddress: SnesAddress,
-            linkedState: State?,
-            memory: SnesMemory,
-            certainty: Certainty
+        opcode: Opcode,
+        bytes: ValidMemorySpace,
+        address: SnesAddress,
+        relativeAddress: SnesAddress,
+        linkedState: State?,
+        memory: SnesMemory,
+        certainty: Certainty
     ) : this(opcode, bytes, address, address, address, relativeAddress, linkedState, memory, certainty)
 
     override val nextSortedAddress: SnesAddress
@@ -109,11 +116,11 @@ interface Instruction : CodeUnit {
 }
 
 class MutableInstruction(
-        override val bytes: ValidMemorySpace,
-        override val opcode: Opcode,
-        override val preState: State,
-        override var continuation: Continuation,
-        override var certainty: Certainty
+    override val bytes: ValidMemorySpace,
+    override val opcode: Opcode,
+    override val preState: State,
+    override var continuation: Continuation,
+    override var certainty: Certainty
 ) : Instruction {
     override val memory = preState.memory
     override val address: SnesAddress get() = preState.address
@@ -174,7 +181,9 @@ fun CodeUnit.print(gameData: GameData? = null): PrintedCodeUnit {
     val secondaryMnemonic = mnemonic.alternativeName
 
     var suffix = lengthSuffix
-    var operands = gameData?.let { opcode.mode.printWithLabel(this, it) }
+    val referencedAddress = opcode.mode.referencedAddress(this)
+    val operandLabel = gameData?.get(referencedAddress)?.label
+    var operands = opcode.mode.printWithLabel(this, operandLabel)
     if (operands == null) {
         operands = opcode.mode.printRaw(this)
         suffix = null
@@ -187,7 +196,7 @@ fun CodeUnit.print(gameData: GameData? = null): PrintedCodeUnit {
     val bytes = bytesToString()
 
     val labelAddress = if (opcode.mode.canHaveLabel) {
-        opcode.mode.referencedAddress(this)?.let {
+        referencedAddress?.let {
             memory.toCanonical(it)
         }
     } else {

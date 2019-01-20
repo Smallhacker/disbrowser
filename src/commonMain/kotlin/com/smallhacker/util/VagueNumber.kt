@@ -1,4 +1,4 @@
-package com.smallhacker.disbrowser.asm
+package com.smallhacker.util
 
 inline class VagueNumber(private val valueAndCertainty: ULong) {
     private constructor(value: UInt, certainty: UInt) : this(value.toULong() or (certainty.toULong() shl 32))

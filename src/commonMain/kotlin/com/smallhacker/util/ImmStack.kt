@@ -1,4 +1,4 @@
-package com.smallhacker.disbrowser
+package com.smallhacker.util
 
 interface ImmStack<E>: Iterable<E> {
     fun isEmpty(): Boolean

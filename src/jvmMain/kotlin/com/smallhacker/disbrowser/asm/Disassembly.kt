@@ -1,5 +1,7 @@
 package com.smallhacker.disbrowser.asm
 
+import com.smallhacker.disbrowser.memory.SnesAddress
+
 class Disassembly(lines: List<CodeUnit>) : Iterable<CodeUnit> {
     override fun iterator() = lineList.iterator() as Iterator<CodeUnit>
 

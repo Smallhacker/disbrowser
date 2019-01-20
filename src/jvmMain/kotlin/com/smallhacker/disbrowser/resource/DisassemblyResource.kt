@@ -1,9 +1,9 @@
 package com.smallhacker.disbrowser.resource
 
 import com.smallhacker.disbrowser.*
-import com.smallhacker.disbrowser.asm.SnesAddress
-import com.smallhacker.disbrowser.asm.VagueNumber
+import com.smallhacker.util.VagueNumber
 import com.smallhacker.disbrowser.game.getGameSource
+import com.smallhacker.disbrowser.memory.SnesAddress
 import java.nio.charset.StandardCharsets
 import javax.ws.rs.GET
 import javax.ws.rs.Path

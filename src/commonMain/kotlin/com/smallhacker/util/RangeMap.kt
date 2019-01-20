@@ -1,6 +1,4 @@
-package com.smallhacker.disbrowser.datatype
-
-import com.smallhacker.disbrowser.util.asReverseSequence
+package com.smallhacker.util
 
 interface RangeMap<K : Comparable<K>, R : ClosedRange<K>, V : Any> {
     operator fun get(key: K): V?
@@ -11,6 +9,7 @@ interface MutableRangeMap<K : Comparable<K>, R : ClosedRange<K>, V: Any> : Range
     operator fun set(keyRange: R, value: V): RangeMap<K, R, V>
 }
 
+// Just an oversimplified implementation for now. Can be heavily optimized if needed.
 class NaiveRangeMap<K : Comparable<K>, R : ClosedRange<K>, V: Any> : MutableRangeMap<K, R, V> {
     private val entries = ArrayList<Pair<R, V>>()
 

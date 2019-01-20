@@ -6,9 +6,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.smallhacker.disbrowser.asm.*
-import com.smallhacker.disbrowser.util.joinNullableBytes
-import com.smallhacker.disbrowser.util.removeIf
-import com.smallhacker.disbrowser.util.toUInt24
+import com.smallhacker.disbrowser.memory.*
+import com.smallhacker.util.joinNullableBytes
+import com.smallhacker.util.removeIf
+import com.smallhacker.util.toUInt24
 import java.util.*
 
 class GameData {

@@ -1,9 +1,9 @@
-package com.smallhacker.disbrowser.asm
+package com.smallhacker.disbrowser.memory
 
-import com.smallhacker.disbrowser.util.UInt24
-import com.smallhacker.disbrowser.util.joinBytes
-import com.smallhacker.disbrowser.util.joinNullableBytes
-import com.smallhacker.disbrowser.util.toUInt24
+import com.smallhacker.util.UInt24
+import com.smallhacker.util.joinBytes
+import com.smallhacker.util.joinNullableBytes
+import com.smallhacker.util.toUInt24
 
 interface MemorySpace {
     val size: UInt
@@ -22,7 +22,8 @@ object EmptyMemorySpace : ValidMemorySpace {
 fun MemorySpace.asSequence(): Sequence<UByte?> = (0u until size).asSequence().map { this[it] }
 fun MemorySpace.getWord(address: UInt): UShort? = joinNullableBytes(this[address], this[address + 1u])?.toUShort()
 fun MemorySpace.getLong(address: UInt): UInt24? = joinNullableBytes(this[address], this[address + 1u], this[address + 2u])?.toUInt24()
-fun MemorySpace.range(start: UInt, length: UInt): MemorySpace = MemoryRange(this, start, length)
+fun MemorySpace.range(start: UInt, length: UInt): MemorySpace =
+    MemoryRange(this, start, length)
 fun MemorySpace.range(start: SnesAddress, length: UInt): MemorySpace = range(start.value.toUInt(), length)
 fun MemorySpace.validate(): ValidMemorySpace? {
     if (asSequence().any { it == null }) {
@@ -34,7 +35,11 @@ fun MemorySpace.validate(): ValidMemorySpace? {
 fun ValidMemorySpace.asSequence(): Sequence<UByte> = (0u until size).asSequence().map { this[it] }
 fun ValidMemorySpace.getWord(address: UInt): UShort = joinBytes(this[address], this[address + 1u]).toUShort()
 fun ValidMemorySpace.getLong(address: UInt): UInt24 = joinBytes(this[address], this[address + 1u], this[address + 2u]).toUInt24()
-fun ValidMemorySpace.range(start: UInt, length: UInt): ValidMemorySpace = MemoryRange(this, start, length).validate()!!
+fun ValidMemorySpace.range(start: UInt, length: UInt): ValidMemorySpace = MemoryRange(
+    this,
+    start,
+    length
+).validate()!!
 fun ValidMemorySpace.range(start: SnesAddress, length: UInt): ValidMemorySpace = range(start.value.toUInt(), length).validate()!!
 
 class ArrayMemorySpace(private val bytes: UByteArray) : MemorySpace {
@@ -52,20 +57,22 @@ class UnreadableMemory(override val size: UInt) : MemorySpace {
     override fun get(address: UInt): UByte? = null
 }
 
-private class MemoryRange(private val parent: MemorySpace, private val start: UInt, override val size: UInt) : MemorySpace {
+private class MemoryRange(private val parent: MemorySpace, private val start: UInt, override val size: UInt) :
+    MemorySpace {
     override fun get(address: UInt) = if (address < size) parent[start + address] else null
 }
 
 
-private class ValidatedMemorySpace(private val parent: MemorySpace) : ValidMemorySpace {
+private class ValidatedMemorySpace(private val parent: MemorySpace) :
+    ValidMemorySpace {
     override val size get() = parent.size
     override fun get(address: UInt) = parent[address]!!
 }
 
 private class ReindexedMemorySpace(
-        private val parent: MemorySpace,
-        override val size: UInt,
-        private val mapper: (UInt) -> UInt
+    private val parent: MemorySpace,
+    override val size: UInt,
+    private val mapper: (UInt) -> UInt
 ) : MemorySpace {
     override fun get(address: UInt): UByte? {
         if (address >= size) {

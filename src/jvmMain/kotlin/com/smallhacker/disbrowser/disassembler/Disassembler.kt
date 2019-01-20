@@ -2,11 +2,13 @@ package com.smallhacker.disbrowser.disassembler
 
 import com.smallhacker.disbrowser.asm.*
 import com.smallhacker.disbrowser.game.*
-import com.smallhacker.disbrowser.util.LifoQueue
-import com.smallhacker.disbrowser.util.mutableMultiMap
-import com.smallhacker.disbrowser.util.putSingle
+import com.smallhacker.disbrowser.memory.*
+import com.smallhacker.util.LifoQueue
+import com.smallhacker.util.mutableMultiMap
+import com.smallhacker.util.putSingle
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+
 
 object Disassembler {
     fun disassemble(initialState: State, gameData: GameData, global: Boolean): Disassembly {

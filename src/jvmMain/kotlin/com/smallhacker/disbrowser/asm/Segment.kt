@@ -1,5 +1,7 @@
 package com.smallhacker.disbrowser.asm
 
+import com.smallhacker.disbrowser.memory.SnesAddress
+
 class Segment (val start: SnesAddress, val end: SegmentEnd, val instructions: List<Instruction>)
 
 class SegmentEnd(val address: SnesAddress, val local: List<State> = emptyList(), val remote: List<State> = emptyList(), val returnAddress: SnesAddress? = null, val returning: Boolean = false)

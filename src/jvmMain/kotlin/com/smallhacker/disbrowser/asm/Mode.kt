@@ -1,14 +1,16 @@
 package com.smallhacker.disbrowser.asm
 
-import com.smallhacker.disbrowser.game.GameData
-import com.smallhacker.disbrowser.util.*
+import com.smallhacker.disbrowser.memory.SnesAddress
+import com.smallhacker.disbrowser.memory.SnesMemory
+import com.smallhacker.util.UInt24
+import com.smallhacker.util.toHex
 
 interface Mode {
     val dataMode get() = false
     val showLengthSuffix get() = true
     val canHaveLabel: Boolean
     fun operandLength(state: State): UInt?
-    fun printWithLabel(ins: CodeUnit, gameData: GameData): String? = referencedAddress(ins)?.let { gameData[it]?.label }
+    fun printWithLabel(ins: CodeUnit, label: String?): String? = label
     fun printRaw(ins: CodeUnit): String
     fun referencedAddress(ins: CodeUnit): SnesAddress?
 }
@@ -31,7 +33,7 @@ private abstract class RawWrappedMode(
         private val suffix: String = ""
 ) : Mode by parent {
     override val canHaveLabel = false
-    override fun printWithLabel(ins: CodeUnit, gameData: GameData): String? = printRaw(ins)
+    override fun printWithLabel(ins: CodeUnit, label: String?): String? = null
     override fun printRaw(ins: CodeUnit) = prefix + parent.printRaw(ins) + suffix
 }
 
@@ -40,7 +42,7 @@ private abstract class WrappedMode(
         private val prefix: String = "",
         private val suffix: String = ""
 ) : Mode by parent {
-    override fun printWithLabel(ins: CodeUnit, gameData: GameData): String? = parent.printWithLabel(ins, gameData)?.let { prefix + it + suffix }
+    override fun printWithLabel(ins: CodeUnit, label: String?): String? = parent.printWithLabel(ins, label)?.let { prefix + it + suffix }
     override fun printRaw(ins: CodeUnit) = prefix + parent.printRaw(ins) + suffix
 }
 
@@ -51,7 +53,7 @@ abstract class MultiMode(private val fallback: Mode, private vararg val options:
 
     override fun operandLength(state: State) = get(state) { operandLength(state) }
 
-    override fun printWithLabel(ins: CodeUnit, gameData: GameData): String? = get(ins.preState) { printWithLabel(ins, gameData) }
+    override fun printWithLabel(ins: CodeUnit, label: String?): String? = get(ins.preState) { printWithLabel(ins, label) }
 
     override fun printRaw(ins: CodeUnit) = get(ins.preState) { printRaw(ins) }
 
@@ -113,17 +115,17 @@ private abstract class DataValueMode(private val length: UInt, protected val typ
 }
 
 private class DataByteMode(type: DataValueType) : DataValueMode(1u, type) {
-    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.byte)
+    override fun printRaw(ins: CodeUnit) = "$" + ins.byte.toHex()
     override fun referencedAddress(ins: CodeUnit): SnesAddress? = type.resolve(ins.byte, ins.preState, ins.memory)
 }
 
 private class DataWordMode(type: DataValueType) : DataValueMode(2u, type) {
-    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.word)
+    override fun printRaw(ins: CodeUnit) = "$" + ins.word.toHex()
     override fun referencedAddress(ins: CodeUnit): SnesAddress? = type.resolve(ins.word, ins.preState, ins.memory)
 }
 
 private class DataLongMode(type: DataValueType) : DataValueMode(3u, type) {
-    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.long)
+    override fun printRaw(ins: CodeUnit) = "$" + ins.long.toHex()
     override fun referencedAddress(ins: CodeUnit): SnesAddress? = type.resolve(ins.long, ins.preState, ins.memory)
 }
 
@@ -139,7 +141,7 @@ object Immediate8 : Mode {
     override val canHaveLabel = false
     override val showLengthSuffix = false
     override fun operandLength(state: State) = 1u
-    override fun printRaw(ins: CodeUnit) = "#$" + toHex(ins.byte)
+    override fun printRaw(ins: CodeUnit) = "#$" + ins.byte.toHex()
     override fun referencedAddress(ins: CodeUnit): SnesAddress? = null
 }
 
@@ -147,35 +149,35 @@ object Immediate16 : Mode {
     override val canHaveLabel = false
     override val showLengthSuffix = false
     override fun operandLength(state: State) = 2u
-    override fun printRaw(ins: CodeUnit) = "#$" + toHex(ins.word)
+    override fun printRaw(ins: CodeUnit) = "#$" + ins.word.toHex()
     override fun referencedAddress(ins: CodeUnit): SnesAddress? = null
 }
 
 object Direct : Mode {
     override val canHaveLabel = true
     override fun operandLength(state: State) = 1u
-    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.byte)
+    override fun printRaw(ins: CodeUnit) = "$" + ins.byte.toHex()
     override fun referencedAddress(ins: CodeUnit) = ins.preState?.resolveDirectPage(ins.byte)
 }
 
 object Absolute : Mode {
     override val canHaveLabel = true
     override fun operandLength(state: State) = 2u
-    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.word)
+    override fun printRaw(ins: CodeUnit) = "$" + ins.word.toHex()
     override fun referencedAddress(ins: CodeUnit) = ins.preState?.resolveAbsoluteData(ins.word)
 }
 
 object AbsoluteCode : Mode {
     override val canHaveLabel = true
     override fun operandLength(state: State) = 2u
-    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.word)
+    override fun printRaw(ins: CodeUnit) = "$" + ins.word.toHex()
     override fun referencedAddress(ins: CodeUnit) = ins.preState?.resolveAbsoluteCode(ins.word)
 }
 
 object AbsoluteLong : Mode {
     override val canHaveLabel = true
     override fun operandLength(state: State) = 3u
-    override fun printRaw(ins: CodeUnit) = "$" + toHex(ins.long)
+    override fun printRaw(ins: CodeUnit) = "$" + ins.long.toHex()
     override fun referencedAddress(ins: CodeUnit) = ins.memory.toCanonical(SnesAddress(ins.long))
 }
 

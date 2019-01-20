@@ -1,6 +1,6 @@
 package com.smallhacker.disbrowser.game
 
-import com.smallhacker.disbrowser.asm.SnesMemory
+import com.smallhacker.disbrowser.memory.SnesMemory
 import com.smallhacker.disbrowser.util.jsonFile
 import org.glassfish.jersey.server.ResourceConfig
 import java.nio.file.Files

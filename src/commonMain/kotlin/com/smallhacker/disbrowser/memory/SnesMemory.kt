@@ -1,16 +1,21 @@
-package com.smallhacker.disbrowser.asm
+package com.smallhacker.disbrowser.memory
 
-import com.smallhacker.disbrowser.datatype.MutableRangeMap
-import com.smallhacker.disbrowser.datatype.NaiveRangeMap
-import com.smallhacker.disbrowser.util.toUInt24
+import com.smallhacker.util.MutableRangeMap
+import com.smallhacker.util.NaiveRangeMap
+import com.smallhacker.util.toUInt24
 
 abstract class SnesMemory: MemorySpace {
     override val size = 0x100_0000u
-    private val areas: MutableRangeMap<UInt, UIntRange, MapperEntry> = NaiveRangeMap()
+    private val areas: MutableRangeMap<UInt, UIntRange, MapperEntry> =
+        NaiveRangeMap()
 
     protected fun add(start: UInt, canonicalStart: UInt, memorySpace: MemorySpace) {
         val range = start until (start + memorySpace.size)
-        areas[range] = MapperEntry(start, SnesAddress(canonicalStart.toUInt24()), memorySpace)
+        areas[range] = MapperEntry(
+            start,
+            SnesAddress(canonicalStart.toUInt24()),
+            memorySpace
+        )
     }
 
     override fun get(address: UInt): UByte? {
